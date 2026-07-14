@@ -67,7 +67,7 @@ function tSafe(key, fallback) {
 
         let html = `
             <div class="hb-drawer-header">
-                <div class="hb-drawer-title">${tSafe('appTitle', '플래시카드로 학습하는 초등영어 800+')}</div>
+                <div class="hb-drawer-title">${tSafe('appTitle', 'Lingo Power')}</div>
                 <div class="hb-drawer-sub">wordsbean</div>
             </div>
         `;

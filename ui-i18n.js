@@ -15,7 +15,7 @@ const UI_LANG_KEY = 'wb800_uiLang_v1';
 
 const UI_DICT = {
     ko: {
-        appTitle: '플래시카드로 학습하는 초등영어 800+',
+        appTitle: 'Lingo Power',
         navFlashcard: '플래시카드',
         navWordcross: '워드크로스',
         navWordfinder: '워드파인더',
@@ -76,7 +76,7 @@ const UI_DICT = {
         comingSoon: '준비중',
     },
     en: {
-        appTitle: 'Elementary English 800+ Flashcards',
+        appTitle: 'Lingo Power',
         navFlashcard: 'Flashcards',
         navWordcross: 'Word Cross',
         navWordfinder: 'Word Finder',
