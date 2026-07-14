@@ -1,0 +1,159 @@
+/* print_ss.css
+   플래시카드로 학습하는 초등영어 800+ — Sentence Scramble 인쇄 */
+
+@page {
+    size: A4;
+    margin: 0.4cm 0.5cm;
+
+    @top-left { content: ""; }
+    @top-center { content: ""; }
+    @top-right {
+        content: "플래시카드로 학습하는 초등영어 800+";
+        font-size: 0.8em;
+        color: #555;
+        vertical-align: bottom;
+        padding-top: 5px;
+    }
+    @bottom-left {
+        content: "Written by wordsbean";
+        font-size: 0.7em;
+        color: #666;
+    }
+    @bottom-center {
+        content: "페이지 " counter(page) " / " counter(pages);
+        font-size: 0.9em;
+        color: #333;
+    }
+    @bottom-right { content: ""; }
+}
+
+body {
+    font-size: 10pt;
+    color: black;
+    background-color: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+}
+
+.puzzle-title {
+    margin-top: 0 !important;
+    margin-bottom: 0.3cm !important;
+    font-size: 1.4em !important;
+}
+
+.ss-card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    padding: 0.3cm !important;
+    page-break-inside: avoid !important;
+}
+
+.ss-card-top {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.3cm !important;
+    margin-bottom: 0.2cm !important;
+}
+
+.ss-thumb {
+    width: 1.4cm !important;
+    height: 1.4cm !important;
+}
+
+.ss-controls {
+    display: none !important;
+}
+
+.ss-slot-row {
+    background: transparent !important;
+    border: none !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.2cm !important;
+    padding: 0.15cm 0 !important;
+}
+
+.ss-slot {
+    min-width: 1.4cm !important;
+    height: 0.7cm !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-bottom: 1.5px solid #999 !important;
+    color: transparent !important;
+    font-size: 0.85em !important;
+}
+
+body.mode-answer .ss-slot {
+    color: #EB5757 !important;
+    border-bottom-color: #EB5757 !important;
+    font-weight: bold !important;
+}
+
+.ss-word-bank {
+    display: none !important; /* 인쇄에서는 단어뱅크 불필요 (문제지엔 빈칸만) */
+}
+
+.ss-item-status {
+    display: none !important;
+}
+
+.answer-grid-header {
+    display: none !important;
+}
+
+.answer-grid {
+    display: none !important;
+}
+
+body.mode-answer .answer-grid {
+    display: block !important;
+    page-break-inside: avoid;
+    margin-top: 0.5cm !important;
+}
+
+body.mode-answer .answer-grid table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+}
+
+body.mode-answer .answer-grid th {
+    background: #eee !important;
+    color: #000 !important;
+    font-size: 0.75em !important;
+    padding: 4pt 6pt !important;
+    text-align: left !important;
+    border: 0.5px solid #ccc !important;
+}
+
+body.mode-answer .answer-grid td {
+    font-size: 0.8em !important;
+    padding: 4pt 6pt !important;
+    border: 0.5px solid #ddd !important;
+}
+
+body.mode-answer .answer-grid .cell-thumb {
+    display: none !important;
+}
+
+.screen-only {
+    display: none !important;
+}
+
+.pagination-controls {
+    display: none !important;
+}
+
+.img-lightbox {
+    display: none !important;
+}
+
+*, *::before, *::after {
+    box-shadow: none !important;
+}
+
+footer {
+    display: none !important;
+}

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학습 이력 - 플래시카드로 학습하는 초등영어 800+</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="flashcard.css">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="style_pg.css">
+</head>
+<body>
+    <header class="screen-only">
+        <h1>📅 <span data-i18n="navProgress">학습 이력</span></h1>
+    </header>
+
+    <!-- 요약 -->
+    <div class="pg-card">
+        <div class="pg-summary">
+            <div class="pg-summary-item">
+                <div class="pg-summary-num" id="totalWordsNum">0</div>
+                <div class="pg-summary-label" data-i18n="progressAccumWords">누적 학습 단어</div>
+            </div>
+            <div class="pg-summary-item">
+                <div class="pg-summary-num" id="totalDaysNum">0</div>
+                <div class="pg-summary-label" data-i18n="progressDaysLearned">학습한 날</div>
+            </div>
+            <div class="pg-summary-item">
+                <div class="pg-summary-num" id="todayNum">0</div>
+                <div class="pg-summary-label" data-i18n="progressTodayLearned">오늘 학습</div>
+            </div>
+            <div class="pg-summary-item pg-summary-item--clickable" id="completedCard" title="완료한 단어 목록 보기">
+                <div class="pg-summary-num" id="completedNum">0/0</div>
+                <div class="pg-summary-label" id="completedLabel" data-i18n="progressCompleted">완료</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 달력 -->
+    <div class="pg-card">
+        <div class="pg-cal-header">
+            <button class="pg-cal-nav-btn" id="prevMonthBtn"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="pg-cal-title" id="calTitle">-</div>
+            <button class="pg-cal-nav-btn" id="nextMonthBtn"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="pg-cal-grid" id="calWeekdays"></div>
+        <div class="pg-cal-grid" id="calDays" style="margin-top:4px;"></div>
+        <div class="pg-cal-legend">
+            <span class="pg-legend-swatch"></span> <span data-i18n="progressLegend">학습한 날 (숫자 = 단어 수)</span>
+        </div>
+    </div>
+
+    <!-- 날짜별 상세 -->
+    <div class="pg-card pg-day-detail" id="dayDetail">
+        <div class="pg-day-detail-header">
+            <div class="pg-day-detail-title" id="dayDetailTitle">-</div>
+            <button type="button" class="pg-print-btn pg-danger-btn" id="completedResetBtn" style="display:none;"><i class="fa-solid fa-trash"></i> <span data-i18n="resetCompleted">완료 목록 초기화</span></button>
+            <button type="button" class="pg-print-btn" id="dayDetailPrintBtn"><i class="fa-solid fa-print"></i> <span data-i18n="printPdf">인쇄 / PDF 출력</span></button>
+        </div>
+        <div id="dayDetailList"></div>
+        <div class="pg-day-detail-pagination" id="dayDetailPagination"></div>
+    </div>
+
+    <!-- 관리/공유 -->
+    <div class="pg-card">
+        <button class="pg-action-btn pg-outline" id="shareBtn"><i class="fa-solid fa-share-nodes"></i>&nbsp; <span data-i18n="progressShare">앱 공유하기</span></button>
+        <button class="pg-action-btn pg-outline" id="emailBtn"><i class="fa-solid fa-envelope"></i>&nbsp; <span data-i18n="progressEmail">개발자에게 메일 보내기</span></button>
+        <button class="pg-action-btn pg-danger" id="resetBtn"><i class="fa-solid fa-trash"></i>&nbsp; <span data-i18n="progressReset">학습 이력 초기화</span></button>
+    </div>
+
+    <script src="ui-i18n.js"></script>
+    <script src="data/cards_all.js"></script>
+    <script src="lang-pref.js"></script>
+    <script src="cards-loader.js"></script>
+    <script src="progress.js"></script>
+    <script src="audio-pref.js"></script>
+    <script src="playback-engine.js"></script>
+    <script>
+        const WEEKDAYS_KO = ['일', '월', '화', '수', '목', '금', '토'];
+        const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const WEEKDAYS = ((typeof getUILang === 'function') ? getUILang() : 'ko') === 'en' ? WEEKDAYS_EN : WEEKDAYS_KO;
+
+        let viewYear, viewMonth; // viewMonth: 0-based
+        let selectedDateKey = null;
+
+        const calTitle = document.getElementById('calTitle');
+        const calWeekdaysEl = document.getElementById('calWeekdays');
+        const calDaysEl = document.getElementById('calDays');
+        const dayDetailEl = document.getElementById('dayDetail');
+        const dayDetailTitle = document.getElementById('dayDetailTitle');
+        const dayDetailList = document.getElementById('dayDetailList');
+
+        // 오디오 재생(mp3 우선, 실패시 TTS 폴백)은 playback-engine.js를 사용합니다.
+
+        function pad2(n) { return String(n).padStart(2, '0'); }
+        function dateKey(y, m, d) { return `${y}-${pad2(m + 1)}-${pad2(d)}`; }
+
+        function renderWeekdayHeader() {
+            calWeekdaysEl.innerHTML = WEEKDAYS.map(w => `<div class="pg-cal-weekday">${w}</div>`).join('');
+        }
+
+        function renderSummary(log) {
+            const allWords = new Set();
+            let totalDays = 0;
+            Object.values(log).forEach(words => {
+                words.forEach(w => allWords.add(w));
+            });
+            totalDays = Object.keys(log).length;
+            const today = new Date();
+            const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+            const todayCount = (log[todayKey] || []).length;
+
+            document.getElementById('totalWordsNum').textContent = allWords.size;
+            document.getElementById('totalDaysNum').textContent = totalDays;
+            document.getElementById('todayNum').textContent = todayCount;
+
+            renderCompletedSummary();
+        }
+
+        // "다음부터 안보기" = 그 단어의 학습을 완료로 표시. 전체 단어 수(cardsData) 대비
+        // 완료 개수/퍼센트를 계산해서 보여줌
+        function renderCompletedSummary() {
+            const total = (typeof cardsData !== 'undefined' && Array.isArray(cardsData)) ? cardsData.length : 0;
+            const completed = getCompletedIds().size;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+            const el = document.getElementById('completedNum');
+            if (el) el.textContent = `${completed}/${total} (${percent}%)`;
+        }
+
+        function renderCalendar() {
+            const log = getStudyLog();
+            renderSummary(log);
+
+            const uiLangForTitle = (typeof getUILang === 'function') ? getUILang() : 'ko';
+            if (uiLangForTitle === 'en') {
+                const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                calTitle.textContent = `${monthNames[viewMonth]} ${viewYear}`;
+            } else {
+                calTitle.textContent = `${viewYear}년 ${viewMonth + 1}월`;
+            }
+
+            const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=일
+            const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+            const today = new Date();
+            const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+            let html = '';
+            for (let i = 0; i < firstDay; i++) {
+                html += `<div class="pg-cal-day is-empty"></div>`;
+            }
+            for (let d = 1; d <= daysInMonth; d++) {
+                const key = dateKey(viewYear, viewMonth, d);
+                const count = (log[key] || []).length;
+                const classes = ['pg-cal-day'];
+                if (count > 0) classes.push('has-study');
+                if (key === todayKey) classes.push('is-today');
+                if (key === selectedDateKey) classes.push('is-selected');
+                html += `
+                    <div class="${classes.join(' ')}" data-date="${key}" data-count="${count}">
+                        <span>${d}</span>
+                        ${count > 0 ? `<span class="pg-cal-count">${count}${uiLangForTitle === 'en' ? '' : '개'}</span>` : ''}
+                    </div>
+                `;
+            }
+            calDaysEl.innerHTML = html;
+
+            calDaysEl.querySelectorAll('.pg-cal-day.has-study').forEach(el => {
+                el.addEventListener('click', () => openDayDetail(el.dataset.date));
+            });
+        }
+
+        // COMPLETED_WORDS_KEY / getCompletedIds() / markWordCompleted() / unmarkWordCompleted()는
+        // cards-loader.js에서 이미 선언됨 (같은 이름을 여기서 또 선언하면 예전에
+        // 겪었던 "이미 선언됨" 문법오류가 재발할 수 있어서, 여기서는 그대로 재사용만 함)
+
+        const DAY_DETAIL_PAGE_SIZE = 20;
+        let dayDetailWords = [];
+        let dayDetailKey = null;
+        let dayDetailPage = 1;
+        let dayDetailMode = 'day'; // 'day' = 그날 학습한 단어, 'completed' = 완료한 단어 목록
+
+        function buildWordItemHtml(w) {
+            const card = cardsData.find(c => (c.word || '').toUpperCase() === (w || '').toUpperCase());
+            const meaning = card ? card.meaning : '';
+            const engExample = card ? card.engExample : '';
+            const korExample = card ? card.korExample : '';
+            const image = card ? card.image : '';
+            const id = card ? card.id : null;
+            const thumb = image ? `<img class="pg-word-thumb" src="${image}" alt="${w}">` : '<div class="pg-word-thumb"></div>';
+            const actionBtn = id === null ? '' : (dayDetailMode === 'completed'
+                ? `<button type="button" class="pg-restore-btn" data-id="${id}" title="완료 취소(복구)"><i class="fa-solid fa-rotate-left"></i></button>`
+                : `<button type="button" class="pg-complete-btn" data-id="${id}" title="학습 완료로 표시"><i class="fa-solid fa-circle-check"></i></button>`);
+            return `
+                <div class="pg-word-item">
+                    ${thumb}
+                    <div class="pg-word-text">
+                        <div class="pg-word-en">${w}</div>
+                        <div class="pg-word-ko">${meaning}</div>
+                        <div class="pg-word-sentence">${engExample}</div>
+                        <div class="pg-word-sentence-ko">${korExample}</div>
+                    </div>
+                    <div class="pg-word-controls">
+                        <button type="button" class="speak-btn" data-word="${w}" data-seq="ee" title="단어 발음"><i class="fa-solid fa-volume-high"></i></button>
+                        <button type="button" class="speak-btn plus" data-word="${w}" data-seq="ee,kk,es,ks" title="전체 듣기"><i class="fa-solid fa-volume-high"></i>+</button>
+                        ${actionBtn}
+                    </div>
+                </div>
+            `;
+        }
+
+        // forcedAll=true면 페이지 무시하고 전체를 그림 (인쇄용)
+        function renderDayDetailList(forcedAll = false) {
+            const words = dayDetailWords;
+            const pagination = document.getElementById('dayDetailPagination');
+
+            if (!words.length) {
+                dayDetailList.innerHTML = `<div class="pg-empty-msg">${t('progressNoRecord')}</div>`;
+                pagination.innerHTML = '';
+                return;
+            }
+
+            const totalPages = Math.ceil(words.length / DAY_DETAIL_PAGE_SIZE);
+            let pageWords = words;
+            if (!forcedAll && words.length > DAY_DETAIL_PAGE_SIZE) {
+                const start = (dayDetailPage - 1) * DAY_DETAIL_PAGE_SIZE;
+                pageWords = words.slice(start, start + DAY_DETAIL_PAGE_SIZE);
+            }
+
+            dayDetailList.innerHTML = pageWords.map(buildWordItemHtml).join('');
+
+            // 페이지네이션 컨트롤 (20개 이하이거나 인쇄용 강제 전체보기면 안 보임)
+            if (!forcedAll && words.length > DAY_DETAIL_PAGE_SIZE) {
+                pagination.innerHTML = `
+                    <button type="button" class="pg-cal-nav-btn" id="dayDetailPrevPage"><i class="fa-solid fa-chevron-left"></i></button>
+                    <span class="pg-day-detail-page-info">${dayDetailPage} / ${totalPages}</span>
+                    <button type="button" class="pg-cal-nav-btn" id="dayDetailNextPage"><i class="fa-solid fa-chevron-right"></i></button>
+                `;
+                document.getElementById('dayDetailPrevPage').addEventListener('click', () => {
+                    if (dayDetailPage > 1) { dayDetailPage--; renderDayDetailList(); }
+                });
+                document.getElementById('dayDetailNextPage').addEventListener('click', () => {
+                    if (dayDetailPage < totalPages) { dayDetailPage++; renderDayDetailList(); }
+                });
+            } else {
+                pagination.innerHTML = '';
+            }
+
+            bindDayDetailItemEvents();
+        }
+
+        function bindDayDetailItemEvents() {
+            dayDetailList.querySelectorAll('.speak-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    playSequence(btn.dataset.word, btn.dataset.seq.split(','), btn);
+                });
+            });
+
+            dayDetailList.querySelectorAll('.pg-complete-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    markWordCompleted(btn.dataset.id);
+                    openDayDetail(dayDetailKey); // 목록 즉시 갱신 (완료율 카드도 같이 갱신됨)
+                });
+            });
+
+            dayDetailList.querySelectorAll('.pg-restore-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    unmarkWordCompleted(btn.dataset.id);
+                    openCompletedList(); // 완료 목록 즉시 갱신
+                });
+            });
+        }
+
+        function printDayDetail() {
+            renderDayDetailList(true); // 인쇄 시에는 페이지 나누지 않고 전체를 다 보여줌
+            window.print();
+            renderDayDetailList(); // 인쇄 끝나면 원래 페이지 보기로 복귀
+        }
+
+        // 완료 표시한 단어 전체 목록 보기 (상단 "완료" 카드 클릭 시)
+        function openCompletedList() {
+            dayDetailMode = 'completed';
+            selectedDateKey = null;
+            renderCalendar();
+
+            const completed = getCompletedIds();
+            const words = cardsData
+                .filter(c => completed.has(String(c.id)))
+                .map(c => c.word);
+
+            dayDetailWords = words;
+            dayDetailKey = null;
+            dayDetailPage = 1;
+
+            const uiLang = (typeof getUILang === 'function') ? getUILang() : 'ko';
+            dayDetailTitle.textContent = uiLang === 'en'
+                ? `Completed words (${words.length})`
+                : `학습 완료한 단어 (${words.length}개)`;
+
+            renderDayDetailList();
+            document.getElementById('completedResetBtn').style.display = 'inline-flex';
+
+            dayDetailEl.classList.add('is-open');
+            dayDetailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // 완료 목록만 통째로 초기화 (달력 학습기록은 안 건드림 - "학습 이력 초기화"와 별개)
+        function resetCompletedWords() {
+            const ok = confirm(t('confirmResetCompleted'));
+            if (!ok) return;
+            localStorage.removeItem(COMPLETED_WORDS_KEY);
+            openCompletedList(); // 목록/완료율 카드 즉시 갱신
+        }
+
+        function openDayDetail(key) {
+            dayDetailMode = 'day';
+            selectedDateKey = key;
+            renderCalendar();
+            document.getElementById('completedResetBtn').style.display = 'none';
+
+            const log = getStudyLog();
+            const completed = getCompletedIds();
+            const allWords = log[key] || [];
+            const words = allWords.filter(w => {
+                const card = cardsData.find(c => (c.word || '').toUpperCase() === (w || '').toUpperCase());
+                if (!card) return true; // 카드 매칭이 안 되면 완료 여부를 판단할 수 없으니 그냥 보여줌
+                return !completed.has(String(card.id)); // 완료 표시(id 기준)한 단어는 목록에서 제외 (학습기록 자체는 그대로 유지)
+            });
+
+            dayDetailWords = words;
+            dayDetailKey = key;
+            dayDetailPage = 1;
+
+            const [y, m, d] = key.split('-').map(Number);
+            const uiLang = (typeof getUILang === 'function') ? getUILang() : 'ko';
+            dayDetailTitle.textContent = uiLang === 'en'
+                ? `Words studied on ${y}-${pad2(m)}-${pad2(d)} (${words.length})`
+                : `${y}년 ${m}월 ${d}일 학습한 단어 (${words.length}개)`;
+
+            renderDayDetailList();
+
+            dayDetailEl.classList.add('is-open');
+            dayDetailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function changeMonth(delta) {
+            viewMonth += delta;
+            if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+            if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+            selectedDateKey = null;
+            dayDetailEl.classList.remove('is-open');
+            renderCalendar();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            viewYear = now.getFullYear();
+            viewMonth = now.getMonth();
+
+            renderWeekdayHeader();
+            renderCalendar();
+
+            document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+            document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+            document.getElementById('dayDetailPrintBtn').addEventListener('click', printDayDetail);
+            document.getElementById('completedCard').addEventListener('click', openCompletedList);
+            document.getElementById('completedResetBtn').addEventListener('click', resetCompletedWords);
+
+            // 학습 이력 초기화
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                const ok = confirm(t('confirmResetHistory'));
+                if (!ok) return;
+                clearStudyLog();
+                selectedDateKey = null;
+                dayDetailEl.classList.remove('is-open');
+                renderCalendar();
+                alert(t('resetHistoryDone'));
+            });
+
+            // 앱 공유하기 (SRT 플레이어와 동일한 패턴)
+            document.getElementById('shareBtn').addEventListener('click', async () => {
+                const shareData = {
+                    title: '플래시카드로 학습하는 초등영어 800+',
+                    text: '이미지와 발음으로 초등 필수 영단어 800개를 배워요!',
+                    url: location.origin + location.pathname.replace('progress.html', 'index.html')
+                };
+                if (navigator.share) {
+                    try {
+                        await navigator.share(shareData);
+                    } catch (err) {
+                        /* 사용자가 공유 취소함 — 무시 */
+                    }
+                } else if (navigator.clipboard) {
+                    try {
+                        await navigator.clipboard.writeText(shareData.url);
+                        alert('링크가 클립보드에 복사되었습니다. 원하는 곳에 붙여넣기(Ctrl+V) 해서 공유하세요!');
+                    } catch (err) {
+                        alert('클립보드 복사에 실패했습니다. 주소창의 URL을 직접 복사해주세요.');
+                    }
+                } else {
+                    alert('이 브라우저는 공유 기능을 지원하지 않습니다. 주소창의 URL을 직접 복사해주세요.');
+                }
+            });
+
+            // 개발자에게 메일 보내기
+            document.getElementById('emailBtn').addEventListener('click', () => {
+                const subject = encodeURIComponent('[초등영어800+] 문의/피드백');
+                const body = encodeURIComponent('앱을 사용하시면서 느끼신 점이나 문의사항을 자유롭게 적어주세요.\n\n');
+                window.location.href = `mailto:everfine2020@gmail.com?subject=${subject}&body=${body}`;
+            });
+        });
+    </script>
+    <script src="nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordFinder Puzzle - 플래시카드로 학습하는 초등영어 800+</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="flashcard.css">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="style_wf.css" media="screen">
+    <link rel="stylesheet" href="print_wf.css" media="print">
+</head>
+<body>
+    <header class="screen-only">
+        <h1>🔍 Word Search Puzzle
+            <span class="puzzle-level" id="levelBadge">-</span>
+            <span class="puzzle-batch-number" id="batchBadge">-</span>
+        </h1>
+    </header>
+
+    <h2 class="puzzle-title" id="printTitle">Word Search Puzzle</h2>
+
+    <div id="puzzleContainer">
+        <div class="wordfinder-grid" id="grid"></div>
+        <div class="wf-word-list">
+            <h3>숨겨진 단어
+                <span class="wf-header-controls">
+                    <button type="button" class="speak-btn" id="wfSpeakBtn" title="전체듣기 (설정에 따름)"><i class="fa-solid fa-volume-high"></i></button>
+                </span>
+            </h3>
+            <ul id="wordList"></ul>
+        </div>
+    </div>
+
+    <!-- 정답 보기 시 나타나는 단어 요약 표 -->
+    <div id="answerGrid" class="answer-grid"></div>
+
+    <footer class="print-only">
+        <div class="footer-message">Written by wordsbean</div>
+    </footer>
+
+    <div id="imgLightbox" class="img-lightbox">
+        <img id="lightboxImg" src="" alt="">
+    </div>
+
+    <div class="pagination-controls">
+        <button id="newPuzzleBtn" class="nav-button" data-i18n="newPuzzle">새 퍼즐 만들기</button>
+        <button id="toggleAnswerBtn" class="nav-button" data-i18n="showAnswer">정답 보기</button>
+        <button id="printBtn" class="nav-button" data-i18n="print">인쇄</button>
+    </div>
+
+    <script src="ui-i18n.js"></script>
+    <script src="data/cards_all.js"></script>
+    <script src="lang-pref.js"></script>
+    <script src="cards-loader.js"></script>
+    <script src="progress.js"></script>
+    <script src="audio-pref.js"></script>
+    <script src="playback-engine.js"></script>
+    <script>
+        // =========================================================
+        // 설정
+        // =========================================================
+        const GRID_SIZE = 15;
+        const WORDS_PER_PUZZLE = 10;
+        const MIN_LEN = 3;
+        const MAX_LEN = 9;
+        const MAX_ATTEMPTS_PLACE = 500; // 단어 1개 배치 최대 시도 (원본 스크립트와 동일)
+        const MAX_PUZZLE_RETRIES = 3;   // 전체 배치 성공률을 위한 재시도
+
+        // 한글/한자/가나는 짧은 단어(1~2글자)가 자연스러워서 알파벳 기준 MIN_LEN을 그대로 쓰면 안 됨
+        function getLenLimits() {
+            const lang = (typeof getCurrentTargetLang === 'function') ? getCurrentTargetLang() : 'en';
+            if (lang === 'ko' || lang === 'zh' || lang === 'ja') {
+                return { min: 1, max: 6 };
+            }
+            return { min: MIN_LEN, max: MAX_LEN };
+        }
+
+        // 8방향: 가로/세로/대각선, 정방향+역방향 (원본 DIRECTIONS와 동일)
+        const DIRECTIONS = [
+            [0, 1], [1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1], [0, -1], [-1, 0]
+        ];
+
+        const COLOR_CLASSES = ['color-red', 'color-blue', 'color-green', 'color-orange', 'color-purple',
+            'color-brown', 'color-teal', 'color-maroon', 'color-navy', 'color-olive'];
+
+        const gridEl = document.getElementById('grid');
+        const wordListEl = document.getElementById('wordList');
+        const levelBadge = document.getElementById('levelBadge');
+        const batchBadge = document.getElementById('batchBadge');
+        const printTitle = document.getElementById('printTitle');
+        const toggleAnswerBtn = document.getElementById('toggleAnswerBtn');
+        const answerGridEl = document.getElementById('answerGrid');
+        const lightbox = document.getElementById('imgLightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+
+        let puzzleCount = 0;
+
+        // 오디오 재생(mp3 우선, 실패시 TTS 폴백)은 playback-engine.js를 사용합니다.
+
+
+        // =========================================================
+        // 1) 후보 단어 풀
+        // =========================================================
+        function buildWordPool() {
+            const seen = new Set();
+            const pool = [];
+            for (const c of getActiveCardsData()) { // 완료 표시한 단어는 출제 대상에서 제외
+                const w = (c.word || '').trim().toUpperCase();
+                // 언어와 무관하게 "한 덩어리 단어"만 허용 (공백/하이픈/구두점 등 여러 단어로 된 건 제외)
+                // 알파벳이든 한자/가나든 스크립트 종류는 상관하지 않음
+                if (!w || /[\s\-'".,;:!?]/.test(w)) continue;
+                const { min, max } = getLenLimits();
+                if (w.length < min || w.length > max) continue;
+                if (seen.has(w)) continue;
+                seen.add(w);
+                pool.push({ word: w, clue: c.meaning, image: c.image, level: c.level });
+            }
+            return pool;
+        }
+
+        function pickRandomWords(pool, count) {
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, count);
+        }
+
+        // =========================================================
+        // 2) 워드서치 배치 (AD_Last_gen-WordSearchfinderHtml.py 포팅)
+        // =========================================================
+        function canPlace(grid, size, word, r, c, dr, dc) {
+            for (let i = 0; i < word.length; i++) {
+                const rr = r + dr * i, cc = c + dc * i;
+                if (rr < 0 || rr >= size || cc < 0 || cc >= size) return false;
+                if (grid[rr][cc] !== '' && grid[rr][cc] !== word[i]) return false;
+            }
+            return true;
+        }
+
+        function placeWord(grid, size, wordMap, cellWordMap, word, colorClass) {
+            let attempts = 0;
+            while (attempts < MAX_ATTEMPTS_PLACE) {
+                const [dr, dc] = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+                const r = Math.floor(Math.random() * size);
+                const c = Math.floor(Math.random() * size);
+
+                const endR = dr * (word.length - 1) + r;
+                const endC = dc * (word.length - 1) + c;
+                if (endR >= size || endC >= size || endR < 0 || endC < 0) {
+                    attempts++;
+                    continue;
+                }
+
+                if (canPlace(grid, size, word, r, c, dr, dc)) {
+                    for (let i = 0; i < word.length; i++) {
+                        const rr = r + dr * i, cc = c + dc * i;
+                        grid[rr][cc] = word[i];
+                        wordMap[`${rr},${cc}`] = colorClass;
+                        cellWordMap[`${rr},${cc}`] = word;
+                    }
+                    return true;
+                }
+                attempts++;
+            }
+            return false;
+        }
+
+        function fillEmptyCells(grid, size) {
+            // 이미 배치된 실제 글자들에서 필러(빈칸 채움용) 문자를 뽑습니다.
+            // 언어와 무관하게(알파벳이든 한자/가나든) 퍼즐에 이미 쓰인 글자만 재사용하므로
+            // 항상 그 언어에 자연스럽게 어울리는 결과가 나옵니다.
+            const usedChars = new Set();
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (grid[r][c]) usedChars.add(grid[r][c]);
+                }
+            }
+            const letters = usedChars.size > 0
+                ? Array.from(usedChars)
+                : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''); // 안전장치: 배치된 단어가 하나도 없는 극단적 경우
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    if (grid[r][c] === '') {
+                        grid[r][c] = letters[Math.floor(Math.random() * letters.length)];
+                    }
+                }
+            }
+        }
+
+        function tryGeneratePuzzle(words, size) {
+            const grid = Array.from({ length: size }, () => Array(size).fill(''));
+            const wordMap = {};
+            const cellWordMap = {};
+            const placed = [];
+            const unplaced = [];
+
+            words.forEach((w, i) => {
+                const color = COLOR_CLASSES[i % COLOR_CLASSES.length];
+                const ok = placeWord(grid, size, wordMap, cellWordMap, w.word, color);
+                if (ok) {
+                    placed.push({ ...w, color });
+                } else {
+                    unplaced.push(w);
+                }
+            });
+
+            fillEmptyCells(grid, size);
+            return { grid, wordMap, cellWordMap, placed, unplaced };
+        }
+
+        function generatePuzzle(pool) {
+            let best = null;
+            for (let attempt = 0; attempt < MAX_PUZZLE_RETRIES; attempt++) {
+                const words = pickRandomWords(pool, WORDS_PER_PUZZLE);
+                const result = tryGeneratePuzzle(words, GRID_SIZE);
+                if (!best || result.placed.length > best.placed.length) best = result;
+                if (best.unplaced.length === 0) break;
+            }
+            return best;
+        }
+
+        // =========================================================
+        // 3) 렌더링
+        // =========================================================
+        function renderPuzzle() {
+            const pool = buildWordPool();
+            const { grid, wordMap, cellWordMap, placed, unplaced } = generatePuzzle(pool);
+
+            puzzleCount++;
+            levelBadge.textContent = (placed[0] && placed[0].level) || '-';
+            batchBadge.textContent = `제 ${puzzleCount}회`;
+            printTitle.textContent = `🔍 Word Search Puzzle 제 ${puzzleCount}회`;
+
+            gridEl.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
+            gridEl.style.gridTemplateRows = `repeat(${GRID_SIZE}, 1fr)`;
+            gridEl.innerHTML = '';
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const cellDiv = document.createElement('div');
+                    const color = wordMap[`${r},${c}`];
+                    const belongsToWord = cellWordMap[`${r},${c}`];
+                    cellDiv.className = 'wf-cell' + (color ? ' ' + color : '');
+                    if (belongsToWord) cellDiv.dataset.word = belongsToWord;
+                    cellDiv.textContent = grid[r][c];
+                    gridEl.appendChild(cellDiv);
+                }
+            }
+
+            // 단어 목록: 알파벳 순 정렬 (원본과 동일)
+            const sorted = [...placed].sort((a, b) => a.word.localeCompare(b.word));
+            wordListEl.innerHTML = '';
+            sorted.forEach((w, i) => {
+                const li = document.createElement('li');
+                li.dataset.word = w.word;
+                li.title = '클릭하면 이 단어만 그리드에서 바로 확인할 수 있어요';
+                const thumb = w.image ? `<img class="wf-thumb" src="${w.image}" alt="${w.word}" data-word="${w.word}">` : '';
+                const full = cardsData.find(c => (c.word || '').toUpperCase() === w.word);
+                const pronunHtml = (full && full.showPronun && full.pronunciation)
+                    ? `<span class="answer-pronun">[${full.pronunciation}]</span>`
+                    : '';
+                li.innerHTML = `
+                    <span class="wf-item-number">${i + 1}.</span>
+                    ${thumb}
+                    <span class="wf-answer-text ${w.color}">${w.word}</span>
+                    ${pronunHtml}
+                    <span class="wf-clue-text">: ${w.clue}</span>
+                `;
+                wordListEl.appendChild(li);
+            });
+
+            renderAnswerGrid(sorted);
+            bindInteractions(sorted);
+
+            if (unplaced.length) {
+                console.info(`배치 실패한 단어 ${unplaced.length}개:`, unplaced.map(w => w.word).join(', '));
+            }
+        }
+
+        function renderAnswerGrid(words) {
+            const rows = words.map(w => {
+                const full = cardsData.find(c => (c.word || '').toUpperCase() === w.word);
+                const eng = full ? full.engExample : '';
+                const kor = full ? full.korExample : '';
+                const showPronun = full && full.showPronun;
+                const wordPronun = showPronun && full.pronunciation ? `<div class="cell-pronun">[${full.pronunciation}]</div>` : '';
+                const sentPronun = showPronun && full.sentencePronunciation ? `<div class="cell-pronun">${full.sentencePronunciation}</div>` : '';
+                const thumbImg = w.image ? `<img src="${w.image}" alt="${w.word}">` : '';
+                return `
+                    <tr>
+                        <td class="cell-thumb">${thumbImg}</td>
+                        <td class="cell-word">${w.word}${wordPronun}</td>
+                        <td>${w.clue}</td>
+                        <td>${eng}${sentPronun}</td>
+                        <td>${kor}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            answerGridEl.innerHTML = `
+                <div class="answer-grid-header">
+                    <h3>${t('answerSummary')}</h3>
+                    <span class="wf-header-controls">
+                        <button type="button" class="speak-btn" id="answerSpeakBtn" title="전체듣기 (설정에 따름)"><i class="fa-solid fa-volume-high"></i></button>
+                    </span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="cell-thumb"></th>
+                            <th>${t('colWord')}</th>
+                            <th>${t('colMeaning')}</th>
+                            <th>${t('colSentence')}</th>
+                            <th>${t('colMeaningSentence')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+
+            const answerSpeakBtn = document.getElementById('answerSpeakBtn');
+            answerSpeakBtn.onclick = () => playAllWords(words, getAudioPrefSuffixes(), answerSpeakBtn);
+        }
+
+        function bindInteractions(words) {
+            document.querySelectorAll('.wf-thumb').forEach(img => {
+                img.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    lightboxImg.src = img.src;
+                    lightboxImg.alt = img.alt;
+                    lightbox.classList.add('is-open');
+                    playSequence(img.dataset.word, ['ee']);
+                });
+            });
+
+            const speakBtn = document.getElementById('wfSpeakBtn');
+            speakBtn.onclick = () => playAllWords(words, getAudioPrefSuffixes(), speakBtn);
+
+            // 리스트 항목 클릭 → 정답 모드와 무관하게 그 단어만 그리드에서 즉시 공개(토글)
+            wordListEl.querySelectorAll('li').forEach(li => {
+                li.addEventListener('click', (e) => {
+                    if (e.target.closest('.wf-thumb')) return; // 썸네일 클릭은 확대만
+                    const word = li.dataset.word;
+                    const isRevealed = li.classList.toggle('is-revealed');
+                    document.querySelectorAll(`.wf-cell[data-word="${word}"]`).forEach(cell => {
+                        cell.classList.toggle('is-revealed', isRevealed);
+                    });
+                    li.querySelector('.wf-answer-text').classList.toggle('is-revealed', isRevealed);
+                    const pronunEl = li.querySelector('.answer-pronun');
+                    if (pronunEl) pronunEl.classList.toggle('is-revealed', isRevealed);
+                });
+            });
+        }
+
+        // =========================================================
+        // 4) 이벤트
+        // =========================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const newPuzzleBtn = document.getElementById('newPuzzleBtn');
+
+            function renderPuzzleWithLoading() {
+                newPuzzleBtn.disabled = true;
+                newPuzzleBtn.textContent = t('generating');
+                setTimeout(() => {
+                    renderPuzzle();
+                    newPuzzleBtn.disabled = false;
+                    newPuzzleBtn.textContent = t('newPuzzle');
+                }, 30);
+            }
+
+            renderPuzzleWithLoading();
+            newPuzzleBtn.addEventListener('click', renderPuzzleWithLoading);
+
+            toggleAnswerBtn.addEventListener('click', () => {
+                document.body.classList.toggle('mode-answer');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                toggleAnswerBtn.textContent = isAnswer ? t('showProblem') : t('showAnswer');
+            });
+
+            document.getElementById('printBtn').addEventListener('click', () => {
+                const num = String(puzzleCount).padStart(3, '0');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                const suffix = isAnswer ? '정답' : '문제';
+                const originalTitle = document.title;
+                document.title = `ws${num}_${suffix}`;
+                window.print();
+                document.title = originalTitle;
+            });
+
+            lightbox.addEventListener('click', () => {
+                lightbox.classList.remove('is-open');
+            });
+        });
+    </script>
+    <script src="nav.js"></script>
+</body>
+</html>

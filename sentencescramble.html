@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentence Scramble - 플래시카드로 학습하는 초등영어 800+</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="flashcard.css">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="style_ss.css" media="screen">
+    <link rel="stylesheet" href="print_ss.css" media="print">
+</head>
+<body>
+    <header class="screen-only">
+        <h1>🔀 Sentence Scramble
+            <span class="puzzle-level" id="levelBadge">-</span>
+            <span class="puzzle-batch-number" id="batchBadge">-</span>
+        </h1>
+    </header>
+
+    <h2 class="puzzle-title" id="printTitle">Sentence Scramble</h2>
+
+    <div class="ss-grid" id="ssGrid"></div>
+
+    <!-- 정답 보기 시 나타나는 단어 요약 표 -->
+    <div id="answerGrid" class="answer-grid"></div>
+
+    <footer class="print-only">
+        <div class="footer-message">Written by wordsbean</div>
+    </footer>
+
+    <div id="imgLightbox" class="img-lightbox">
+        <img id="lightboxImg" src="" alt="">
+    </div>
+
+    <div class="pagination-controls">
+        <button id="newPuzzleBtn" class="nav-button" data-i18n="newPuzzle">새 퍼즐 만들기</button>
+        <button id="toggleAnswerBtn" class="nav-button" data-i18n="showAnswer">정답 보기</button>
+        <button id="printBtn" class="nav-button" data-i18n="print">인쇄</button>
+    </div>
+
+    <script src="ui-i18n.js"></script>
+    <script src="data/cards_all.js"></script>
+    <script src="lang-pref.js"></script>
+    <script src="cards-loader.js"></script>
+    <script src="progress.js"></script>
+    <script src="audio-pref.js"></script>
+    <script src="playback-engine.js"></script>
+    <script>
+        // =========================================================
+        // 설정
+        // =========================================================
+        const ITEMS_PER_PAGE = 4;
+        const MIN_WORDS = 3; // 문장 최소 단어 수
+
+        const ssGrid = document.getElementById('ssGrid');
+        const levelBadge = document.getElementById('levelBadge');
+        const batchBadge = document.getElementById('batchBadge');
+        const printTitle = document.getElementById('printTitle');
+        const toggleAnswerBtn = document.getElementById('toggleAnswerBtn');
+        const answerGridEl = document.getElementById('answerGrid');
+        const lightbox = document.getElementById('imgLightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+
+        let puzzleCount = 0;
+        let currentItems = []; // 각 item: { word, clue, image, level, tokens: [{text, origIndex}], nextIndex }
+
+        // 오디오 재생(mp3 우선, 실패시 TTS 폴백)은 playback-engine.js를 사용합니다.
+
+
+        // =========================================================
+        // 1) 후보 문장 풀 (영어예문이 3단어 이상인 카드만)
+        // =========================================================
+        function buildSentencePool() {
+            const seen = new Set();
+            const pool = [];
+            for (const c of getActiveCardsData()) { // 완료 표시한 단어는 출제 대상에서 제외
+                const eng = (c.engExample || '').trim();
+                if (!eng) continue;
+                const words = eng.split(/\s+/);
+                if (words.length < MIN_WORDS) continue;
+                const w = (c.word || '').trim().toUpperCase();
+                if (seen.has(eng)) continue; // 같은 문장 중복 방지
+                seen.add(eng);
+                pool.push({ word: w, clue: c.meaning, image: c.image, level: c.level, engExample: eng, korExample: c.korExample });
+            }
+            return pool;
+        }
+
+        function pickRandomWords(pool, count) {
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, count);
+        }
+
+        function shuffleArray(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // =========================================================
+        // 2) 렌더링
+        // =========================================================
+        function renderPuzzle() {
+            const pool = buildSentencePool();
+            const picks = pickRandomWords(pool, ITEMS_PER_PAGE);
+
+            currentItems = picks.map(item => {
+                const words = item.engExample.split(/\s+/);
+                const tokens = words.map((text, origIndex) => ({ text, origIndex }));
+                return { ...item, tokens, nextIndex: 0 };
+            });
+
+            puzzleCount++;
+            levelBadge.textContent = (currentItems[0] && currentItems[0].level) || '-';
+            batchBadge.textContent = `제 ${puzzleCount}회`;
+            printTitle.textContent = `🔀 Sentence Scramble 제 ${puzzleCount}회`;
+
+            ssGrid.innerHTML = currentItems.map((item, idx) => {
+                const thumb = item.image ? `<img class="ss-thumb" src="${item.image}" alt="${item.word}" data-word="${item.word}">` : '<div class="ss-thumb"></div>';
+
+                const slotsHtml = item.tokens.map((t, i) =>
+                    `<span class="ss-slot${i === 0 ? ' is-next' : ''}" data-item="${idx}" data-slot="${i}"></span>`
+                ).join('');
+
+                const scrambled = shuffleArray(item.tokens);
+                const bankHtml = scrambled.map(t => {
+                    const tilt = (Math.random() * 12 - 6).toFixed(1); // -6deg ~ 6deg
+                    return `<span class="ss-word-block" style="--tilt:${tilt}deg; transform:rotate(${tilt}deg);" data-item="${idx}" data-origindex="${t.origIndex}">${t.text}</span>`;
+                }).join('');
+
+                return `
+                    <div class="ss-card" data-item="${idx}">
+                        <div class="ss-card-top">
+                            ${thumb}
+                            <div>
+                                <span class="ss-item-number">${idx + 1}.</span>
+                                <span class="ss-meaning">${item.korExample || item.clue}</span>
+                            </div>
+                            <div class="ss-controls">
+                                <button type="button" class="speak-btn" data-word="${item.word}" data-seq="es" title="문장 듣기"><i class="fa-solid fa-volume-high"></i></button>
+                                <button type="button" class="speak-btn plus" data-word="${item.word}" data-seq="es,ks" title="영+한 문장 듣기"><i class="fa-solid fa-volume-high"></i>+</button>
+                            </div>
+                        </div>
+                        <div class="ss-slot-row">${slotsHtml}</div>
+                        <div class="ss-word-bank">${bankHtml}</div>
+                        <div class="ss-item-status" id="ssStatus${idx}"></div>
+                    </div>
+                `;
+            }).join('');
+
+            renderAnswerGrid(currentItems);
+            bindInteractions();
+        }
+
+        // =========================================================
+        // 3) 상호작용: 단어 블록 클릭 → 정답 순서면 슬롯에 채움, 아니면 튕김
+        // =========================================================
+        function bindInteractions() {
+            ssGrid.querySelectorAll('.ss-word-block').forEach(block => {
+                block.addEventListener('click', () => {
+                    const itemIdx = Number(block.dataset.item);
+                    const origIndex = Number(block.dataset.origindex);
+                    const item = currentItems[itemIdx];
+
+                    if (origIndex === item.nextIndex) {
+                        // 정답: 해당 슬롯에 채우고 블록은 숨김
+                        const slot = ssGrid.querySelector(`.ss-slot[data-item="${itemIdx}"][data-slot="${origIndex}"]`);
+                        slot.textContent = block.textContent;
+                        slot.classList.add('is-filled');
+                        slot.classList.remove('is-next');
+                        block.classList.add('is-placed');
+
+                        item.nextIndex++;
+                        const nextSlot = ssGrid.querySelector(`.ss-slot[data-item="${itemIdx}"][data-slot="${item.nextIndex}"]`);
+                        if (nextSlot) nextSlot.classList.add('is-next');
+
+                        if (item.nextIndex >= item.tokens.length) {
+                            document.getElementById(`ssStatus${itemIdx}`).textContent = '✓ 완성!';
+                            playSequence(item.word, getAudioPrefSuffixes());
+                        }
+                    } else {
+                        // 오답: 튕김 애니메이션
+                        block.classList.remove('is-wrong');
+                        void block.offsetWidth; // 애니메이션 재시작을 위한 리플로우 트릭
+                        block.classList.add('is-wrong');
+                        setTimeout(() => block.classList.remove('is-wrong'), 350);
+                    }
+                });
+            });
+
+            ssGrid.querySelectorAll('.ss-controls .speak-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const seq = btn.dataset.seq.split(',');
+                    playSequence(btn.dataset.word, seq, btn);
+                });
+            });
+
+            ssGrid.querySelectorAll('.ss-thumb[data-word]').forEach(img => {
+                img.addEventListener('click', () => {
+                    lightboxImg.src = img.src;
+                    lightboxImg.alt = img.alt;
+                    lightbox.classList.add('is-open');
+                    playSequence(img.dataset.word, ['ee']);
+                });
+            });
+        }
+
+        // =========================================================
+        // 4) 정답 요약 표
+        // =========================================================
+        function renderAnswerGrid(items) {
+            const rows = items.map(w => {
+                const thumbImg = w.image ? `<img src="${w.image}" alt="${w.word}">` : '';
+                return `
+                    <tr>
+                        <td class="cell-thumb">${thumbImg}</td>
+                        <td class="cell-word">${w.word}</td>
+                        <td>${w.clue}</td>
+                        <td>${w.engExample || ''}</td>
+                        <td>${w.korExample || ''}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            answerGridEl.innerHTML = `
+                <div class="answer-grid-header">
+                    <h3>${t('answerSummary')}</h3>
+                    <span class="clue-header-controls">
+                        <button type="button" class="speak-btn" id="answerSpeakBtn" title="전체듣기 (설정에 따름)"><i class="fa-solid fa-volume-high"></i></button>
+                    </span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="cell-thumb"></th>
+                            <th>${t('colWord')}</th>
+                            <th>${t('colMeaning')}</th>
+                            <th>${t('colSentence')}</th>
+                            <th>${t('colMeaningSentence')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+
+            const answerSpeakBtn = document.getElementById('answerSpeakBtn');
+            answerSpeakBtn.onclick = () => playAllWords(items, getAudioPrefSuffixes(), answerSpeakBtn);
+        }
+
+        // =========================================================
+        // 5) 이벤트
+        // =========================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const newPuzzleBtn = document.getElementById('newPuzzleBtn');
+
+            function renderPuzzleWithLoading() {
+                newPuzzleBtn.disabled = true;
+                newPuzzleBtn.textContent = t('generating');
+                setTimeout(() => {
+                    renderPuzzle();
+                    newPuzzleBtn.disabled = false;
+                    newPuzzleBtn.textContent = t('newPuzzle');
+                }, 30);
+            }
+
+            renderPuzzleWithLoading();
+            newPuzzleBtn.addEventListener('click', renderPuzzleWithLoading);
+
+            toggleAnswerBtn.addEventListener('click', () => {
+                document.body.classList.toggle('mode-answer');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                toggleAnswerBtn.textContent = isAnswer ? t('showProblem') : t('showAnswer');
+                if (isAnswer) {
+                    currentItems.forEach((item, idx) => {
+                        item.tokens.forEach((t, i) => {
+                            const slot = ssGrid.querySelector(`.ss-slot[data-item="${idx}"][data-slot="${i}"]`);
+                            if (slot) { slot.textContent = t.text; slot.classList.add('is-filled'); }
+                        });
+                    });
+                }
+            });
+
+            document.getElementById('printBtn').addEventListener('click', () => {
+                const num = String(puzzleCount).padStart(3, '0');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                const suffix = isAnswer ? '정답' : '문제';
+                const originalTitle = document.title;
+                document.title = `ss${num}_${suffix}`;
+                window.print();
+                document.title = originalTitle;
+            });
+
+            lightbox.addEventListener('click', () => {
+                lightbox.classList.remove('is-open');
+            });
+        });
+    </script>
+    <script src="nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+ — Fill in the Blank
+   style_fb.css (screen)
+   ============================================================ */
+
+body {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 110px;
+}
+
+header.screen-only {
+    background: linear-gradient(135deg, var(--color-header), var(--color-header-2));
+    border-radius: var(--radius-lg);
+    padding: 16px 22px;
+    margin-bottom: 18px;
+}
+
+header.screen-only h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.puzzle-level {
+    background: var(--color-purple);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-batch-number {
+    background: var(--color-orange);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-title {
+    display: none;
+}
+
+.fb-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.fb-card {
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 18px 20px;
+}
+
+.fb-card-top {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.fb-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #F4F6FA;
+    flex: 0 0 auto;
+    cursor: zoom-in;
+}
+
+.fb-item-number {
+    font-weight: 800;
+    color: var(--color-blue);
+    margin-right: 4px;
+}
+
+.fb-meaning {
+    font-size: 13px;
+    color: var(--color-ink-soft);
+}
+
+.fb-controls {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+}
+
+.fb-controls .speak-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+}
+
+.fb-controls .speak-btn.plus {
+    font-size: 10px;
+}
+
+.fb-sentence {
+    font-size: 16px;
+    color: var(--color-ink);
+    margin: 10px 0 14px;
+    line-height: 1.5;
+}
+
+.fb-sentence .fb-blank {
+    display: inline-block;
+    min-width: 70px;
+    border-bottom: 2px solid var(--color-blue);
+    text-align: center;
+    color: var(--color-blue);
+    font-weight: 800;
+    font-family: var(--font-mono);
+}
+
+.fb-kor-sentence {
+    font-size: 13px;
+    color: var(--color-ink-soft);
+    margin-bottom: 14px;
+}
+
+/* ---------- 4지선다 ---------- */
+.fb-choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+@media (max-width: 480px) {
+    .fb-choices {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fb-choice-btn {
+    background: #F4F6FA;
+    color: var(--color-ink);
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fb-choice-btn:hover:not(:disabled) {
+    background: #EEF3FF;
+}
+
+.fb-choice-letter {
+    font-weight: 800;
+    color: var(--color-blue);
+    flex: 0 0 auto;
+}
+
+.fb-choice-btn.is-correct {
+    background: #E9F9F0;
+    color: #1E8E4F;
+}
+
+.fb-choice-btn.is-correct .fb-choice-letter {
+    color: #1E8E4F;
+}
+
+.fb-choice-btn.is-wrong {
+    background: #FDEBEA;
+    color: #C0392B;
+    animation: fbShake 0.3s ease;
+}
+
+@keyframes fbShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+.fb-choice-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.fb-item-status {
+    text-align: center;
+    font-size: 12px;
+    color: #27AE60;
+    font-weight: 700;
+    margin-top: 8px;
+    height: 16px;
+}
+
+/* 정답 모드: 정답 버튼 강조, 나머지 비활성 표기 */
+body.mode-answer .fb-choice-btn {
+    pointer-events: none;
+}
+
+body.mode-answer .fb-choice-btn.is-answer {
+    background: #E9F9F0;
+    color: #1E8E4F;
+}
+
+body.mode-answer .fb-blank {
+    color: #EB5757;
+}
+
+/* ---------- 정답 요약 표 ---------- */
+.answer-grid {
+    display: none;
+    margin-top: 20px;
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+body.mode-answer .answer-grid {
+    display: block;
+}
+
+.answer-grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 0;
+}
+
+.answer-grid-header h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-ink);
+    margin: 0;
+}
+
+.answer-grid table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.answer-grid th {
+    background: var(--color-header);
+    color: #fff;
+    font-size: 13px;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.answer-grid td {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #EEF1F6;
+    vertical-align: middle;
+}
+
+.answer-grid tr:last-child td {
+    border-bottom: none;
+}
+
+.answer-grid .cell-word {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-word);
+}
+
+.answer-grid .cell-thumb img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+}
+
+/* ---------- 라이트박스 ---------- */
+.img-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 33, 0.82);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: zoom-out;
+}
+
+.img-lightbox.is-open {
+    display: flex;
+}
+
+.img-lightbox img {
+    max-width: min(90vw, 480px);
+    max-height: 80vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fill in the Blank - 플래시카드로 학습하는 초등영어 800+</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="flashcard.css">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="style_fb.css" media="screen">
+    <link rel="stylesheet" href="print_fb.css" media="print">
+</head>
+<body>
+    <header class="screen-only">
+        <h1>📝 Fill in the Blank
+            <span class="puzzle-level" id="levelBadge">-</span>
+            <span class="puzzle-batch-number" id="batchBadge">-</span>
+        </h1>
+    </header>
+
+    <h2 class="puzzle-title" id="printTitle">Fill in the Blank</h2>
+
+    <div class="fb-grid" id="fbGrid"></div>
+
+    <!-- 정답 보기 시 나타나는 단어 요약 표 -->
+    <div id="answerGrid" class="answer-grid"></div>
+
+    <footer class="print-only">
+        <div class="footer-message">Written by wordsbean</div>
+    </footer>
+
+    <div id="imgLightbox" class="img-lightbox">
+        <img id="lightboxImg" src="" alt="">
+    </div>
+
+    <div class="pagination-controls">
+        <button id="newPuzzleBtn" class="nav-button" data-i18n="newPuzzle">새 퍼즐 만들기</button>
+        <button id="toggleAnswerBtn" class="nav-button" data-i18n="showAnswer">정답 보기</button>
+        <button id="printBtn" class="nav-button" data-i18n="print">인쇄</button>
+    </div>
+
+    <script src="ui-i18n.js"></script>
+    <script src="data/cards_all.js"></script>
+    <script src="lang-pref.js"></script>
+    <script src="cards-loader.js"></script>
+    <script src="progress.js"></script>
+    <script src="audio-pref.js"></script>
+    <script src="playback-engine.js"></script>
+    <script>
+        // =========================================================
+        // 설정
+        // =========================================================
+        const ITEMS_PER_PAGE = 8;
+        const CHOICE_LETTERS = ['A', 'B', 'C', 'D'];
+
+        const fbGrid = document.getElementById('fbGrid');
+        const levelBadge = document.getElementById('levelBadge');
+        const batchBadge = document.getElementById('batchBadge');
+        const printTitle = document.getElementById('printTitle');
+        const toggleAnswerBtn = document.getElementById('toggleAnswerBtn');
+        const answerGridEl = document.getElementById('answerGrid');
+        const lightbox = document.getElementById('imgLightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+
+        let puzzleCount = 0;
+        let currentItems = []; // { word, clue, image, level, engExample, korExample, blankedSentence, choices:[{text,isCorrect}] }
+
+        // 오디오 재생(mp3 우선, 실패시 TTS 폴백)은 playback-engine.js를 사용합니다.
+
+
+        // =========================================================
+        // 1) 후보 풀: 예문 안에 단어가 실제로 들어있는 카드만 (빈칸 처리 가능)
+        // =========================================================
+        function buildFillBlankPool() {
+            const seen = new Set();
+            const pool = [];
+            for (const c of getActiveCardsData()) { // 완료 표시한 단어는 출제 대상에서 제외
+                const w = (c.word || '').trim().toUpperCase();
+                const eng = (c.engExample || '').trim();
+                if (!w || !eng) continue;
+                // 언어와 무관하게 "한 덩어리 단어"만 허용 (공백/구두점 있는 여러 단어는 제외)
+                if (/[\s\-'".,;:!?]/.test(w)) continue;
+                if (!findWordToken(eng, w)) continue; // 예문 토큰 중에 단어가 없으면 빈칸 처리 불가
+                if (seen.has(w)) continue;
+                seen.add(w);
+                pool.push({ word: w, clue: c.meaning, image: c.image, level: c.level, engExample: eng, korExample: c.korExample });
+            }
+            return pool;
+        }
+
+        function pickRandomWords(pool, count) {
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, count);
+        }
+
+        function shuffleArray(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // 문장을 공백 기준 토큰으로 쪼개서, 그 단어와 일치하는(또는 그 단어로 시작하는—
+        // 구두점이 붙은 경우 대비) 토큰의 인덱스를 찾음. \b 정규식은 한자/가나에서
+        // 제대로 동작하지 않아서(단어 경계 개념이 알파벳 전용) 이 방식으로 대체함.
+        function findWordToken(sentence, word) {
+            const tokens = sentence.split(/\s+/);
+            const wordLower = word.toLowerCase();
+            const idx = tokens.findIndex(tok => tok.toLowerCase().includes(wordLower));
+            return idx === -1 ? null : { tokens, idx };
+        }
+
+        // 문장에서 단어가 들어있는 토큰을 빈칸으로 치환하고, 원문에 쓰인 실제 표기도 함께 반환
+        function blankOutWord(sentence, word) {
+            const found = findWordToken(sentence, word);
+            if (!found) return { blanked: sentence, matchedText: word };
+            const { tokens, idx } = found;
+            const matchedText = tokens[idx];
+            tokens[idx] = '<span class="fb-blank">&nbsp;</span>';
+            return { blanked: tokens.join(' '), matchedText };
+        }
+
+        // 오답 3개 뽑기 (정답과 겹치지 않게)
+        function pickDistractors(pool, correctWord, count) {
+            const candidates = pool.filter(p => p.word !== correctWord);
+            return shuffleArray(candidates).slice(0, count).map(p => p.word);
+        }
+
+        // =========================================================
+        // 2) 렌더링
+        // =========================================================
+        function renderPuzzle() {
+            const pool = buildFillBlankPool();
+            const picks = pickRandomWords(pool, ITEMS_PER_PAGE);
+
+            currentItems = picks.map(item => {
+                const distractors = pickDistractors(pool, item.word, 3);
+                const choiceWords = shuffleArray([item.word, ...distractors]);
+                const choices = choiceWords.map(w => ({ text: w, isCorrect: w === item.word }));
+                const { blanked, matchedText } = blankOutWord(item.engExample, item.word);
+                return { ...item, blankedSentence: blanked, matchedText, choices };
+            });
+
+            puzzleCount++;
+            levelBadge.textContent = (currentItems[0] && currentItems[0].level) || '-';
+            batchBadge.textContent = `제 ${puzzleCount}회`;
+            printTitle.textContent = `📝 Fill in the Blank 제 ${puzzleCount}회`;
+
+            fbGrid.innerHTML = currentItems.map((item, idx) => {
+                const thumb = item.image ? `<img class="fb-thumb" src="${item.image}" alt="${item.word}" data-word="${item.word}">` : '<div class="fb-thumb"></div>';
+
+                const choicesHtml = item.choices.map((c, ci) => `
+                    <button type="button" class="fb-choice-btn" data-item="${idx}" data-word="${c.text}" data-correct="${c.isCorrect}">
+                        <span class="fb-choice-letter">${CHOICE_LETTERS[ci]}.</span>
+                        <span>${c.text}</span>
+                    </button>
+                `).join('');
+
+                return `
+                    <div class="fb-card" data-item="${idx}">
+                        <div class="fb-card-top">
+                            ${thumb}
+                            <div>
+                                <span class="fb-item-number">${idx + 1}.</span>
+                                <span class="fb-meaning">${item.clue}</span>
+                            </div>
+                            <div class="fb-controls">
+                                <button type="button" class="speak-btn" data-word="${item.word}" data-seq="ee" title="단어 듣기"><i class="fa-solid fa-volume-high"></i></button>
+                                <button type="button" class="speak-btn plus" data-word="${item.word}" data-seq="ee,kk" title="영+한 듣기"><i class="fa-solid fa-volume-high"></i>+</button>
+                            </div>
+                        </div>
+                        <p class="fb-sentence">${item.blankedSentence}</p>
+                        <p class="fb-kor-sentence">${item.korExample || ''}</p>
+                        <div class="fb-choices">${choicesHtml}</div>
+                        <div class="fb-item-status" id="fbStatus${idx}"></div>
+                    </div>
+                `;
+            }).join('');
+
+            renderAnswerGrid(currentItems);
+            bindInteractions();
+        }
+
+        // =========================================================
+        // 3) 상호작용: 선택지 클릭 → 정답이면 확정, 오답이면 흔들고 비활성화
+        // =========================================================
+        function bindInteractions() {
+            fbGrid.querySelectorAll('.fb-choice-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const itemIdx = Number(btn.dataset.item);
+                    const isCorrect = btn.dataset.correct === 'true';
+                    const item = currentItems[itemIdx];
+
+                    if (isCorrect) {
+                        btn.classList.add('is-correct');
+                        fbGrid.querySelectorAll(`.fb-choice-btn[data-item="${itemIdx}"]`).forEach(b => b.disabled = true);
+                        document.getElementById(`fbStatus${itemIdx}`).textContent = '✓ 정답!';
+                        const card = fbGrid.querySelector(`.fb-card[data-item="${itemIdx}"]`);
+                        const blank = card && card.querySelector('.fb-blank');
+                        if (blank) blank.textContent = item.matchedText;
+                        playSequence(item.word, getAudioPrefSuffixes());
+                    } else {
+                        btn.classList.remove('is-wrong');
+                        void btn.offsetWidth;
+                        btn.classList.add('is-wrong');
+                        setTimeout(() => {
+                            btn.classList.remove('is-wrong');
+                            btn.disabled = true; // 틀린 보기는 재클릭 방지, 나머지로 재시도
+                        }, 300);
+                    }
+                });
+            });
+
+            fbGrid.querySelectorAll('.fb-controls .speak-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const seq = btn.dataset.seq.split(',');
+                    playSequence(btn.dataset.word, seq, btn);
+                });
+            });
+
+            fbGrid.querySelectorAll('.fb-thumb[data-word]').forEach(img => {
+                img.addEventListener('click', () => {
+                    lightboxImg.src = img.src;
+                    lightboxImg.alt = img.alt;
+                    lightbox.classList.add('is-open');
+                    playSequence(img.dataset.word, ['ee']);
+                });
+            });
+        }
+
+        // =========================================================
+        // 4) 정답 요약 표
+        // =========================================================
+        function renderAnswerGrid(items) {
+            const rows = items.map(w => {
+                const thumbImg = w.image ? `<img src="${w.image}" alt="${w.word}">` : '';
+                return `
+                    <tr>
+                        <td class="cell-thumb">${thumbImg}</td>
+                        <td class="cell-word">${w.word}</td>
+                        <td>${w.clue}</td>
+                        <td>${w.engExample || ''}</td>
+                        <td>${w.korExample || ''}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            answerGridEl.innerHTML = `
+                <div class="answer-grid-header">
+                    <h3>${t('answerSummary')}</h3>
+                    <span class="clue-header-controls">
+                        <button type="button" class="speak-btn" id="answerSpeakBtn" title="전체듣기 (설정에 따름)"><i class="fa-solid fa-volume-high"></i></button>
+                    </span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="cell-thumb"></th>
+                            <th>${t('colWord')}</th>
+                            <th>${t('colMeaning')}</th>
+                            <th>${t('colSentence')}</th>
+                            <th>${t('colMeaningSentence')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+
+            const answerSpeakBtn = document.getElementById('answerSpeakBtn');
+            answerSpeakBtn.onclick = () => playAllWords(items, getAudioPrefSuffixes(), answerSpeakBtn);
+        }
+
+        // =========================================================
+        // 5) 이벤트
+        // =========================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const newPuzzleBtn = document.getElementById('newPuzzleBtn');
+
+            function renderPuzzleWithLoading() {
+                newPuzzleBtn.disabled = true;
+                newPuzzleBtn.textContent = t('generating');
+                setTimeout(() => {
+                    renderPuzzle();
+                    newPuzzleBtn.disabled = false;
+                    newPuzzleBtn.textContent = t('newPuzzle');
+                }, 30);
+            }
+
+            renderPuzzleWithLoading();
+            newPuzzleBtn.addEventListener('click', renderPuzzleWithLoading);
+
+            toggleAnswerBtn.addEventListener('click', () => {
+                document.body.classList.toggle('mode-answer');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                toggleAnswerBtn.textContent = isAnswer ? t('showProblem') : t('showAnswer');
+                if (isAnswer) {
+                    fbGrid.querySelectorAll('.fb-choice-btn').forEach(btn => {
+                        if (btn.dataset.correct === 'true') btn.classList.add('is-answer');
+                    });
+                    currentItems.forEach((item, idx) => {
+                        const card = fbGrid.querySelector(`.fb-card[data-item="${idx}"]`);
+                        const blank = card && card.querySelector('.fb-blank');
+                        if (blank) blank.textContent = item.matchedText; // 원문 그대로의 대소문자로 채움
+                    });
+                } else {
+                    fbGrid.querySelectorAll('.fb-blank').forEach(blank => {
+                        blank.innerHTML = '&nbsp;';
+                    });
+                }
+            });
+
+            document.getElementById('printBtn').addEventListener('click', () => {
+                const num = String(puzzleCount).padStart(3, '0');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                const suffix = isAnswer ? '정답' : '문제';
+                const originalTitle = document.title;
+                document.title = `fb${num}_${suffix}`;
+                window.print();
+                document.title = originalTitle;
+            });
+
+            lightbox.addEventListener('click', () => {
+                lightbox.classList.remove('is-open');
+            });
+        });
+    </script>
+    <script src="nav.js"></script>
+</body>
+</html>

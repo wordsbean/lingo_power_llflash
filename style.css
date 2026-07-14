@@ -1,0 +1,77 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+
+   style.css — 전역 베이스 스타일
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Noto+Sans+KR:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+    /* --- Color tokens --- */
+    --color-bg: #EEF1F6;           /* 페이지 배경 (연한 그레이 블루) */
+    --color-card: #FFFFFF;         /* 카드 배경 */
+    --color-ink: #263043;          /* 본문 텍스트 */
+    --color-ink-soft: #5B6478;     /* 보조 텍스트 */
+    --color-header: #1F2A44;       /* 상단 네비게이션 바 */
+    --color-header-2: #2C3A5C;     /* 상단 네비게이션 그라디언트 끝 */
+
+    --color-blue: #2F80ED;         /* 순번 배지 / 버튼 */
+    --color-blue-dark: #2262c4;
+    --color-orange: #F2994A;       /* 테마 배지 */
+    --color-purple: #9B51E0;       /* 레벨 배지 */
+    --color-word: #2F3FA6;         /* 영단어 텍스트 */
+    --color-example-en: #3B5BDB;   /* 영어 예문 */
+    --color-teal: #1FA6A0;         /* 발음기호 / 포인트 */
+
+    --radius-lg: 20px;
+    --radius-md: 12px;
+    --radius-pill: 999px;
+
+    --shadow-card: 0 10px 30px rgba(31, 42, 68, 0.10);
+    --shadow-soft: 0 2px 8px rgba(31, 42, 68, 0.08);
+
+    --font-display: 'Baloo 2', 'Noto Sans KR', sans-serif;
+    --font-body: 'Noto Sans KR', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding-bottom: 96px; /* 하단 고정 컨트롤바 공간 확보 */
+}
+
+button {
+    font-family: var(--font-body);
+    cursor: pointer;
+    border: none;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+button:focus-visible,
+a:focus-visible {
+    outline: 3px solid var(--color-teal);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -1,0 +1,221 @@
+/* print_wf.css
+   플래시카드로 학습하는 초등영어 800+ — WordFinder 인쇄 스타일
+   wordcross의 print_wc.css 패턴을 그대로 재사용 */
+
+@page {
+    size: A4;
+    margin: 0.4cm 0.5cm;
+
+    @top-left { content: ""; }
+    @top-center { content: ""; }
+    @top-right {
+        content: "플래시카드로 학습하는 초등영어 800+";
+        font-size: 0.8em;
+        color: #555;
+        vertical-align: bottom;
+        padding-top: 5px;
+    }
+    @bottom-left {
+        content: "Written by wordsbean";
+        font-size: 0.7em;
+        color: #666;
+    }
+    @bottom-center {
+        content: "페이지 " counter(page) " / " counter(pages);
+        font-size: 0.9em;
+        color: #333;
+    }
+    @bottom-right { content: ""; }
+}
+
+body {
+    font-size: 10pt;
+    color: black;
+    background-color: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+}
+
+.puzzle-title {
+    margin-top: 0 !important;
+    margin-bottom: 0.2cm !important;
+    font-size: 1.4em !important;
+}
+
+h1 .puzzle-batch-number,
+.puzzle-title .puzzle-batch-number {
+    font-size: 0.9em;
+    color: #333;
+    margin-left: 8pt;
+    font-weight: normal;
+}
+
+h1 .puzzle-level,
+.puzzle-title .puzzle-level {
+    color: #000;
+}
+
+#puzzleContainer {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    page-break-inside: avoid;
+}
+
+/* 15x15 그리드: 13.5cm / 15칸 = 0.9cm */
+.wordfinder-grid {
+    display: grid !important;
+    border: 0.5px solid #000 !important;
+    width: 13.5cm !important;
+    height: auto !important;
+    margin: 0 auto 0.3cm auto !important;
+    page-break-inside: avoid !important;
+}
+
+.wf-cell {
+    width: 0.9cm !important;
+    height: 0.9cm !important;
+    border: 0.5px solid #ddd !important;
+    font-size: 0.85em !important;
+    background-color: white !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+/* 문제 모드: 정답 하이라이트/텍스트 숨김 (그냥 글자만 보이는 순수 퍼즐) */
+.wf-answer-text {
+    display: none !important;
+}
+
+/* 정답 모드: 찾은 단어 칸을 단어별 색으로 강조 + 답 텍스트도 동일 색 */
+body.mode-answer .wf-cell.color-red { background-color: #FADBD8 !important; }
+body.mode-answer .wf-cell.color-blue { background-color: #D6E9FA !important; }
+body.mode-answer .wf-cell.color-green { background-color: #D8F3E2 !important; }
+body.mode-answer .wf-cell.color-orange { background-color: #FCE4CC !important; }
+body.mode-answer .wf-cell.color-purple { background-color: #EBDBF7 !important; }
+body.mode-answer .wf-cell.color-brown { background-color: #EADBCF !important; }
+body.mode-answer .wf-cell.color-teal { background-color: #D2F1EF !important; }
+body.mode-answer .wf-cell.color-maroon { background-color: #F3D9DA !important; }
+body.mode-answer .wf-cell.color-navy { background-color: #D9E1EE !important; }
+body.mode-answer .wf-cell.color-olive { background-color: #E9EAD0 !important; }
+
+body.mode-answer .wf-answer-text {
+    display: inline !important;
+    font-weight: bold !important;
+    margin-left: 6pt;
+}
+body.mode-answer .wf-answer-text.color-red { color: #C0392B !important; }
+body.mode-answer .wf-answer-text.color-blue { color: #2266C4 !important; }
+body.mode-answer .wf-answer-text.color-green { color: #1E8E4F !important; }
+body.mode-answer .wf-answer-text.color-orange { color: #C8710F !important; }
+body.mode-answer .wf-answer-text.color-purple { color: #7E3FBF !important; }
+body.mode-answer .wf-answer-text.color-brown { color: #7A5230 !important; }
+body.mode-answer .wf-answer-text.color-teal { color: #128077 !important; }
+body.mode-answer .wf-answer-text.color-maroon { color: #8E3B3D !important; }
+body.mode-answer .wf-answer-text.color-navy { color: #1F3A5F !important; }
+body.mode-answer .wf-answer-text.color-olive { color: #6B6A1A !important; }
+
+.wf-word-list {
+    margin-top: 0.3cm !important;
+}
+
+.wf-word-list h3 {
+    color: black !important;
+    border-bottom: 0.5px solid #eee !important;
+    padding-bottom: 2px !important;
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+    font-size: 1em !important;
+}
+
+.wf-header-controls {
+    display: none !important;
+}
+
+.wf-word-list ul {
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+}
+
+.wf-word-list li {
+    margin-bottom: 2px !important;
+    font-size: 0.9em !important;
+    line-height: 1.1 !important;
+}
+
+.wf-item-number {
+    font-weight: bold !important;
+    margin-right: 3px !important;
+    color: #2F80ED !important;
+}
+
+.wf-thumb {
+    display: none !important;
+}
+
+/* 정답 요약 테이블 (wordcross와 동일 패턴) */
+.answer-grid {
+    display: none !important;
+}
+
+body.mode-answer .answer-grid {
+    display: block !important;
+    page-break-inside: avoid;
+    margin-top: 0.5cm !important;
+}
+
+body.mode-answer .answer-grid table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+}
+
+.answer-grid-header {
+    display: none !important; /* 인쇄에서는 "정답 요약" 헤더 텍스트 없이 표만 노출 */
+}
+
+body.mode-answer .answer-grid th {
+    background: #eee !important;
+    color: #000 !important;
+    font-size: 0.75em !important;
+    padding: 4pt 6pt !important;
+    text-align: left !important;
+    border: 0.5px solid #ccc !important;
+}
+
+body.mode-answer .answer-grid td {
+    font-size: 0.8em !important;
+    padding: 4pt 6pt !important;
+    border: 0.5px solid #ddd !important;
+}
+
+body.mode-answer .answer-grid .cell-thumb {
+    display: none !important;
+}
+
+.screen-only {
+    display: none !important;
+}
+
+.pagination-controls {
+    display: none !important;
+}
+
+.img-lightbox {
+    display: none !important;
+}
+
+*, *::before, *::after {
+    box-shadow: none !important;
+}
+
+footer {
+    display: none !important;
+}

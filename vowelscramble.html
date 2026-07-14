@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vowel Scramble - 플래시카드로 학습하는 초등영어 800+</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="flashcard.css">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="style_vs.css" media="screen">
+    <link rel="stylesheet" href="print_vs.css" media="print">
+</head>
+<body>
+    <header class="screen-only">
+        <h1>🔤 Vowel Scramble
+            <span class="puzzle-level" id="levelBadge">-</span>
+            <span class="puzzle-batch-number" id="batchBadge">-</span>
+        </h1>
+    </header>
+
+    <h2 class="puzzle-title" id="printTitle">Vowel Scramble</h2>
+
+    <div class="vs-grid" id="vsGrid"></div>
+
+    <!-- 정답 보기 시 나타나는 단어 요약 표 -->
+    <div id="answerGrid" class="answer-grid"></div>
+
+    <footer class="print-only">
+        <div class="footer-message">Written by wordsbean</div>
+    </footer>
+
+    <div id="imgLightbox" class="img-lightbox">
+        <img id="lightboxImg" src="" alt="">
+    </div>
+
+    <div class="pagination-controls">
+        <button id="newPuzzleBtn" class="nav-button" data-i18n="newPuzzle">새 퍼즐 만들기</button>
+        <button id="toggleAnswerBtn" class="nav-button" data-i18n="showAnswer">정답 보기</button>
+        <button id="printBtn" class="nav-button" data-i18n="print">인쇄</button>
+    </div>
+
+    <script src="ui-i18n.js"></script>
+    <script src="data/cards_all.js"></script>
+    <script src="lang-pref.js"></script>
+    <script src="cards-loader.js"></script>
+    <script src="progress.js"></script>
+    <script src="audio-pref.js"></script>
+    <script src="playback-engine.js"></script>
+    <script>
+        // =========================================================
+        // 설정
+        // =========================================================
+        const ITEMS_PER_PAGE = 4; // 2x2 레이아웃 (원본 VOWEL_SCRAMBLE_ITEMS_PER_PAGE와 동일)
+        const MIN_LEN = 2;
+        const MAX_LEN = 10;
+        const VOWELS = ['A', 'E', 'I', 'O', 'U', 'Y'];
+
+        const vsGrid = document.getElementById('vsGrid');
+        const levelBadge = document.getElementById('levelBadge');
+        const batchBadge = document.getElementById('batchBadge');
+        const printTitle = document.getElementById('printTitle');
+        const toggleAnswerBtn = document.getElementById('toggleAnswerBtn');
+        const answerGridEl = document.getElementById('answerGrid');
+        const lightbox = document.getElementById('imgLightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+
+        let puzzleCount = 0;
+        let currentItems = [];
+
+        // 오디오 재생(mp3 우선, 실패시 TTS 폴백)은 playback-engine.js를 사용합니다.
+
+        // =========================================================
+        // 1) 후보 단어 풀 (모음 없는 단어/부적합 단어 제외 - 원본 로직과 동일)
+        // =========================================================
+        function buildWordPool() {
+            const seen = new Set();
+            const pool = [];
+            for (const c of getActiveCardsData()) { // 완료 표시한 단어는 출제 대상에서 제외
+                const w = (c.word || '').trim().toUpperCase();
+                if (!/^[A-Z]+$/.test(w)) continue;
+                if (w.length < MIN_LEN || w.length > MAX_LEN) continue;
+                if (!VOWELS.some(v => w.includes(v))) continue; // 모음이 없는 단어 제외
+                if (seen.has(w)) continue;
+                seen.add(w);
+                pool.push({ word: w, clue: c.meaning, image: c.image, level: c.level, engExample: c.engExample, korExample: c.korExample });
+            }
+            return pool;
+        }
+
+        function pickRandomWords(pool, count) {
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            return shuffled.slice(0, count);
+        }
+
+        // 단어를 자음골격(빈칸=_)+정답 모음 배열로 변환 (원본 get_vowels_and_consonants 포팅)
+        function toBlankSkeleton(word) {
+            return word.split('').map(ch => VOWELS.includes(ch) ? '_' : ch);
+        }
+
+        // =========================================================
+        // 2) 렌더링
+        // =========================================================
+        function renderPuzzle() {
+            const pool = buildWordPool();
+            currentItems = pickRandomWords(pool, ITEMS_PER_PAGE);
+
+            puzzleCount++;
+            levelBadge.textContent = (currentItems[0] && currentItems[0].level) || '-';
+            batchBadge.textContent = `제 ${puzzleCount}회`;
+            printTitle.textContent = `🔤 Vowel Scramble 제 ${puzzleCount}회`;
+
+            vsGrid.innerHTML = currentItems.map((item, idx) => {
+                const skeleton = toBlankSkeleton(item.word);
+                const charsHtml = skeleton.map((ch, i) => {
+                    if (ch === '_') {
+                        return `<span class="vs-char vs-blank" data-item="${idx}" data-index="${i}" data-correct="${item.word[i]}"></span>`;
+                    }
+                    return `<span class="vs-char">${ch}</span>`;
+                }).join('');
+
+                const vowelButtons = VOWELS.map(v => `<button type="button" class="vs-vowel-btn" data-item="${idx}" data-vowel="${v}">${v}</button>`).join('');
+                const thumb = item.image ? `<img class="vs-thumb" src="${item.image}" alt="${item.word}" data-word="${item.word}">` : '<div class="vs-thumb"></div>';
+
+                return `
+                    <div class="vs-card" data-item="${idx}" data-word="${item.word}">
+                        <div class="vs-card-top">
+                            ${thumb}
+                            <div>
+                                <span class="vs-item-number">${idx + 1}.</span>
+                                <span class="vs-meaning">${item.clue}</span>
+                            </div>
+                        </div>
+                        <div class="vs-word-row">${charsHtml}</div>
+                        <div class="vs-vowel-pool">${vowelButtons}</div>
+                        <div class="vs-item-status" id="vsStatus${idx}"></div>
+                        <div class="vs-examples">
+                            <p class="vs-eng-example">${item.engExample || ''}</p>
+                            <p class="vs-kor-example">${item.korExample || ''}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            renderAnswerGrid(currentItems);
+            bindInteractions();
+        }
+
+        // =========================================================
+        // 3) 상호작용: 빈칸 선택 → 모음 버튼 클릭 → 채점
+        // =========================================================
+        function bindInteractions() {
+            // 빈칸 클릭 → 활성화
+            vsGrid.querySelectorAll('.vs-blank').forEach(blank => {
+                blank.addEventListener('click', () => {
+                    if (blank.classList.contains('is-filled')) return;
+                    const itemIdx = blank.dataset.item;
+                    vsGrid.querySelectorAll(`.vs-blank[data-item="${itemIdx}"]`).forEach(b => b.classList.remove('is-active'));
+                    blank.classList.add('is-active');
+                });
+            });
+
+            // 모음 버튼 클릭 → 활성화된 빈칸 채점
+            vsGrid.querySelectorAll('.vs-vowel-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const itemIdx = btn.dataset.item;
+                    const active = vsGrid.querySelector(`.vs-blank[data-item="${itemIdx}"].is-active`);
+                    if (!active) return;
+
+                    const chosen = btn.dataset.vowel;
+                    const correct = active.dataset.correct;
+
+                    if (chosen === correct) {
+                        active.textContent = chosen;
+                        active.classList.remove('is-active');
+                        active.classList.add('is-filled');
+                        moveToNextBlank(itemIdx, active);
+                        checkItemComplete(itemIdx);
+                    } else {
+                        active.classList.add('is-wrong');
+                        setTimeout(() => active.classList.remove('is-wrong'), 300);
+                    }
+                });
+            });
+
+            // 썸네일 클릭 → 확대 + 발음
+            vsGrid.querySelectorAll('.vs-thumb[data-word]').forEach(img => {
+                img.addEventListener('click', () => {
+                    lightboxImg.src = img.src;
+                    lightboxImg.alt = img.alt;
+                    lightbox.classList.add('is-open');
+                    playSequence(img.dataset.word, ['ee']);
+                });
+            });
+
+            // 각 카드의 첫 번째 빈칸을 자동으로 활성화 (모음 버튼부터 눌러도 바로 채점되도록)
+            currentItems.forEach((item, idx) => {
+                const firstBlank = vsGrid.querySelector(`.vs-blank[data-item="${idx}"]`);
+                if (firstBlank) firstBlank.classList.add('is-active');
+            });
+        }
+
+        function moveToNextBlank(itemIdx, currentBlank) {
+            const blanks = Array.from(vsGrid.querySelectorAll(`.vs-blank[data-item="${itemIdx}"]`));
+            const currentPos = blanks.indexOf(currentBlank);
+            const next = blanks.slice(currentPos + 1).find(b => !b.classList.contains('is-filled'));
+            if (next) next.classList.add('is-active');
+        }
+
+        function checkItemComplete(itemIdx) {
+            const blanks = vsGrid.querySelectorAll(`.vs-blank[data-item="${itemIdx}"]`);
+            const allFilled = Array.from(blanks).every(b => b.classList.contains('is-filled'));
+            const statusEl = document.getElementById(`vsStatus${itemIdx}`);
+            if (allFilled) {
+                statusEl.textContent = '✓ 완성!';
+                const item = currentItems[itemIdx];
+                if (item) playSequence(item.word, getAudioPrefSuffixes());
+            }
+        }
+
+        // =========================================================
+        // 4) 정답 요약 표
+        // =========================================================
+        function renderAnswerGrid(items) {
+            const rows = items.map(w => {
+                const thumbImg = w.image ? `<img src="${w.image}" alt="${w.word}">` : '';
+                return `
+                    <tr>
+                        <td class="cell-thumb">${thumbImg}</td>
+                        <td class="cell-word">${w.word}</td>
+                        <td>${w.clue}</td>
+                        <td>${w.engExample || ''}</td>
+                        <td>${w.korExample || ''}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            answerGridEl.innerHTML = `
+                <div class="answer-grid-header">
+                    <h3>${t('answerSummary')}</h3>
+                    <span class="clue-header-controls">
+                        <button type="button" class="speak-btn" id="answerSpeakBtn" title="전체듣기 (설정에 따름)"><i class="fa-solid fa-volume-high"></i></button>
+                    </span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="cell-thumb"></th>
+                            <th>${t('colWord')}</th>
+                            <th>${t('colMeaning')}</th>
+                            <th>${t('colSentence')}</th>
+                            <th>${t('colMeaningSentence')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+
+            const answerSpeakBtn = document.getElementById('answerSpeakBtn');
+            answerSpeakBtn.onclick = () => {
+                let idx = 0;
+                answerSpeakBtn.classList.add('is-playing');
+                function next() {
+                    if (idx >= items.length) { answerSpeakBtn.classList.remove('is-playing'); return; }
+                    playSequence(items[idx++].word, getAudioPrefSuffixes(), null, next);
+                }
+                next();
+            };
+        }
+
+        // =========================================================
+        // 5) 이벤트
+        // =========================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const newPuzzleBtn = document.getElementById('newPuzzleBtn');
+
+            function renderPuzzleWithLoading() {
+                newPuzzleBtn.disabled = true;
+                newPuzzleBtn.textContent = t('generating');
+                setTimeout(() => {
+                    renderPuzzle();
+                    newPuzzleBtn.disabled = false;
+                    newPuzzleBtn.textContent = t('newPuzzle');
+                }, 30);
+            }
+
+            renderPuzzleWithLoading();
+            newPuzzleBtn.addEventListener('click', renderPuzzleWithLoading);
+
+            toggleAnswerBtn.addEventListener('click', () => {
+                document.body.classList.toggle('mode-answer');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                toggleAnswerBtn.textContent = isAnswer ? t('showProblem') : t('showAnswer');
+                if (isAnswer) {
+                    vsGrid.querySelectorAll('.vs-blank').forEach(b => {
+                        b.textContent = b.dataset.correct;
+                    });
+                }
+            });
+
+            document.getElementById('printBtn').addEventListener('click', () => {
+                const num = String(puzzleCount).padStart(3, '0');
+                const isAnswer = document.body.classList.contains('mode-answer');
+                const suffix = isAnswer ? '정답' : '문제';
+                const originalTitle = document.title;
+                document.title = `vs${num}_${suffix}`;
+                window.print();
+                document.title = originalTitle;
+            });
+
+            lightbox.addEventListener('click', () => {
+                lightbox.classList.remove('is-open');
+            });
+        });
+    </script>
+    <script src="nav.js"></script>
+</body>
+</html>

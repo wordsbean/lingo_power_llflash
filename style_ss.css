@@ -1,0 +1,301 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+ — Sentence Scramble
+   style_ss.css (screen)
+   ============================================================ */
+
+body {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 110px;
+}
+
+header.screen-only {
+    background: linear-gradient(135deg, var(--color-header), var(--color-header-2));
+    border-radius: var(--radius-lg);
+    padding: 16px 22px;
+    margin-bottom: 18px;
+}
+
+header.screen-only h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.puzzle-level {
+    background: var(--color-purple);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-batch-number {
+    background: var(--color-orange);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-title {
+    display: none;
+}
+
+/* ---------- 2x2 카드 그리드 (2문제씩, 문장이 길어서 세로 1열도 허용) ---------- */
+.ss-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+}
+
+.ss-card {
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 20px;
+}
+
+.ss-card-top {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.ss-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: #F4F6FA;
+    flex: 0 0 auto;
+    cursor: zoom-in;
+}
+
+.ss-item-number {
+    font-weight: 800;
+    color: var(--color-blue);
+    margin-right: 4px;
+}
+
+.ss-meaning {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-ink-soft);
+}
+
+.ss-controls {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+}
+
+.ss-controls .speak-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+}
+
+.ss-controls .speak-btn.plus {
+    font-size: 10px;
+}
+
+/* ---------- 정답 슬롯 (위쪽 빈칸 줄) ---------- */
+.ss-slot-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px;
+    background: #F8F9FB;
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+    align-items: center;
+}
+
+.ss-slot {
+    min-width: 46px;
+    height: 32px;
+    border-bottom: 3px solid #D9DEE8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-ink);
+}
+
+.ss-slot.is-next {
+    border-bottom-color: var(--color-blue);
+}
+
+.ss-slot.is-filled {
+    background: #E9F9F0;
+    border-bottom-color: #27AE60;
+    color: #1E8E4F;
+    border-radius: 6px 6px 0 0;
+    animation: ssDropIn 0.22s ease;
+}
+
+@keyframes ssDropIn {
+    0% { transform: translateY(-14px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+/* ---------- 흩어진 단어 뱅크 (기울어진 블록) ---------- */
+.ss-word-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 10px 6px;
+    justify-content: center;
+}
+
+.ss-word-block {
+    background: #EEF3FF;
+    color: var(--color-blue);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(31, 42, 68, 0.10);
+    transition: transform 0.15s ease, background 0.15s ease;
+    user-select: none;
+}
+
+.ss-word-block:hover {
+    background: #DCE7FF;
+}
+
+.ss-word-block.is-placed {
+    display: none;
+}
+
+.ss-word-block.is-wrong {
+    animation: ssBounceReject 0.35s ease;
+    background: #FDEBEA;
+    color: #C0392B;
+}
+
+@keyframes ssBounceReject {
+    0% { transform: translateY(0) rotate(var(--tilt, 0deg)); }
+    30% { transform: translateY(-10px) rotate(var(--tilt, 0deg)); }
+    55% { transform: translateY(4px) rotate(var(--tilt, 0deg)); }
+    100% { transform: translateY(0) rotate(var(--tilt, 0deg)); }
+}
+
+.ss-item-status {
+    text-align: center;
+    font-size: 12px;
+    color: #27AE60;
+    font-weight: 700;
+    margin-top: 6px;
+    height: 16px;
+}
+
+/* 정답 모드: 뱅크 숨기고 슬롯에 정답 채움 */
+body.mode-answer .ss-word-bank {
+    display: none;
+}
+
+body.mode-answer .ss-slot {
+    background: #E9F9F0;
+    border-bottom-color: #27AE60;
+    color: #1E8E4F;
+    border-radius: 6px 6px 0 0;
+}
+
+/* ---------- 정답 요약 표 (다른 도구와 동일 패턴) ---------- */
+.answer-grid {
+    display: none;
+    margin-top: 20px;
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+body.mode-answer .answer-grid {
+    display: block;
+}
+
+.answer-grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 0;
+}
+
+.answer-grid-header h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-ink);
+    margin: 0;
+}
+
+.answer-grid table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.answer-grid th {
+    background: var(--color-header);
+    color: #fff;
+    font-size: 13px;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.answer-grid td {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #EEF1F6;
+    vertical-align: middle;
+}
+
+.answer-grid tr:last-child td {
+    border-bottom: none;
+}
+
+.answer-grid .cell-word {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-word);
+}
+
+.answer-grid .cell-thumb img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+}
+
+/* ---------- 라이트박스 ---------- */
+.img-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 33, 0.82);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: zoom-out;
+}
+
+.img-lightbox.is-open {
+    display: flex;
+}
+
+.img-lightbox img {
+    max-width: min(90vw, 480px);
+    max-height: 80vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}

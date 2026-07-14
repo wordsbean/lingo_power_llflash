@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>플래시카드로 학습하는 초등영어 800+</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="flashcard.css">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="print_fc.css" media="print">
+</head>
+<body>
+    <div class="top-navigation">
+        <div class="text-button-3d day-info" id="numberInfo">-</div>
+        <div class="text-button-3d theme-info" id="themeInfo">-</div>
+        <div class="text-button-3d level-info" id="levelInfo">-</div>
+    </div>
+
+    <div class="main-layout-quiz">
+        <div class="flashcard-section">
+            <h2 data-i18n="appTitle">플래시카드로 학습하는 초등영어 800+</h2>
+            <div class="flashcard-grid-container" id="flashcardGrid">
+                <!-- 카드 내용은 JS가 cardsData(data/cards.js)를 읽어 여기 렌더링합니다 -->
+            </div>
+        </div>
+    </div>
+
+    <div class="pagination-controls">
+        <button id="prevPageBtn" class="nav-button" data-i18n="prevPage">이전 페이지</button>
+        <span id="pageInfo" class="page-info">페이지 - / -</span>
+        <button id="nextPageBtn" class="nav-button" data-i18n="nextPage">다음 페이지</button>
+        <button id="autoAdvanceBtn" class="nav-button icon-toggle" title="자동 넘김" data-i18n-title="autoAdvanceOn"><i class="fa-solid fa-rotate"></i></button>
+        <button id="randomModeBtn" class="nav-button icon-toggle" title="랜덤 순서" data-i18n-title="randomOrder"><i class="fa-solid fa-shuffle"></i></button>
+        <button id="manualCaptureBtn" class="nav-button" data-i18n="manualCapture">수동 캡처</button>
+        <button id="startAutoCaptureBtn" class="nav-button" data-i18n="autoCaptureStart">자동 캡처 시작</button>
+        <button id="stopAutoCaptureBtn" class="nav-button" style="display: none;" data-i18n="autoCaptureStop">자동 캡처 정지</button>
+        <button id="toggleIpaBtn" class="nav-button" data-i18n="showIpa">발음기호 표시</button>
+    </div>
+
+    <audio id="correctSound" src="audio/correct.mp3" preload="auto"></audio>
+    <audio id="incorrectSound" src="audio/incorrect.mp3" preload="auto"></audio>
+
+    <!-- 데이터: xlsx_to_cards_json.py 로 생성된 파일. fetch 없이 바로 로드(file:// 에서도 작동) -->
+    <script src="ui-i18n.js"></script>
+    <script src="data/cards_all.js"></script>
+    <script src="lang-pref.js"></script>
+    <script src="cards-loader.js"></script>
+    <script src="progress.js"></script>
+    <script src="audio-pref.js"></script>
+    <script src="playback-engine.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        // ---------------------------------------------------------------
+        // cardsData 는 data/cards.js 에서 <script> 태그로 이미 로드되어
+        // 전역 변수로 사용 가능합니다. fetch 불필요.
+        // ---------------------------------------------------------------
+        let currentIndex = 0; // 0-based
+        let showIpa = localStorage.getItem('showIpa') === 'true'; // 기본값: 숨김
+        let autoAdvance = localStorage.getItem('autoAdvance') === 'true';
+        let randomMode = localStorage.getItem('randomMode') === 'true';
+        let autoAdvanceTimer = null;
+        let autoCaptureInterval;
+        let cardsReady = false;
+
+        const numberInfoEl = document.getElementById('numberInfo');
+        const themeInfoEl = document.getElementById('themeInfo');
+        const levelInfoEl = document.getElementById('levelInfo');
+        const gridEl = document.getElementById('flashcardGrid');
+        const pageInfoEl = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
+        const toggleIpaBtn = document.getElementById('toggleIpaBtn');
+        const autoAdvanceBtn = document.getElementById('autoAdvanceBtn');
+        const randomModeBtn = document.getElementById('randomModeBtn');
+
+        // 오디오 재생(mp3 우선, 실패시 TTS 폴백)은 playback-engine.js의
+        // ttsPlayer / playSequence / playAllWords / window.__stopAudio 를 그대로 사용합니다.
+
+        // 카드 렌더링 후 스피커 버튼에 클릭 이벤트 연결
+        function bindSpeakEvents() {
+            gridEl.querySelectorAll('.speak-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const word = btn.dataset.word;
+                    const seq = btn.dataset.seq.split(',');
+                    const card = cardsData.find(c => c.word === word);
+                    playSequence(card, seq, btn);
+                });
+            });
+
+            gridEl.querySelectorAll('.complete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const id = btn.dataset.id;
+                    if (typeof markWordCompleted !== 'function') return;
+                    markWordCompleted(id); // cards-loader.js의 공용 함수 - 모든 도구의 출제 풀에서 제외됨
+
+                    // 지금 보고 있던 카드를 이번 세션의 목록에서도 바로 빼고, 같은 위치의 다음 카드로 이동
+                    cardsData.splice(currentIndex, 1);
+                    if (currentIndex >= cardsData.length) currentIndex = cardsData.length - 1;
+                    renderCard(currentIndex);
+                });
+            });
+        }
+
+        function initCards() {
+            if (typeof cardsData === 'undefined' || !Array.isArray(cardsData) || cardsData.length === 0) {
+                gridEl.innerHTML = '<p style="text-align:center;color:#888;">카드 데이터를 찾을 수 없습니다. data/cards_all.js 경로와 스크립트 로딩 순서를 확인하세요.</p>';
+                pageInfoEl.textContent = '페이지 0 / 0';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+
+            cardsReady = true;
+
+            // URL 쿼리스트링으로 특정 페이지에서 시작 가능: ?page=5 (우선순위 최상위)
+            const params = new URLSearchParams(window.location.search);
+            const startPage = parseInt(params.get('page'), 10);
+            if (!isNaN(startPage) && startPage >= 1 && startPage <= cardsData.length) {
+                currentIndex = startPage - 1;
+            } else {
+                // URL에 지정이 없으면, 지난번에 보던 위치를 이어서 시작
+                const savedIndex = parseInt(localStorage.getItem('lastCardIndex'), 10);
+                if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < cardsData.length) {
+                    currentIndex = savedIndex;
+                }
+            }
+
+            renderCard(currentIndex);
+        }
+
+        function renderCard(index) {
+            if (!cardsReady) return;
+            const card = cardsData[index];
+            if (!card) return;
+
+            localStorage.setItem('lastCardIndex', index); // 다음에 열 때 이어서 보기 위해 저장
+
+            // 좌측: 단어 전체 순번(id) / 가운데: 테마 / 우측: 레벨
+            numberInfoEl.textContent = card.id;
+            themeInfoEl.textContent = card.theme;
+            levelInfoEl.textContent = card.level;
+
+            const ipaHtml = (card.ipa && showIpa)
+                ? `<p class="flashcard-ipa">/${card.ipa}/</p>`
+                : '';
+            const pronunHtml = (card.pronunciation && card.showPronun)
+                ? `<p class="flashcard-pronun">[${card.pronunciation}]</p>`
+                : '';
+            const sentPronunHtml = (card.sentencePronunciation && card.showPronun)
+                ? `<p class="flashcard-sent-pronun">${card.sentencePronunciation}</p>`
+                : '';
+
+            gridEl.innerHTML = `
+                <div class="flashcard-item">
+                    <div class="flashcard-top-area">
+                        <div class="flashcard-image-wrapper">
+                            <img src="${card.image}" alt="${card.word} Image" class="flashcard-image" crossorigin="anonymous">
+                        </div>
+                        <div class="flashcard-word-meaning-content">
+                            <h3 class="flashcard-word">
+                                ${card.word}
+                                <button type="button" class="speak-btn" data-word="${card.word}" data-seq="ee" title="영어 발음 듣기"><i class="fa-solid fa-volume-high"></i></button>
+                                <button type="button" class="speak-btn plus" data-word="${card.word}" data-seq="ee,kk" title="영어+한글 듣기"><i class="fa-solid fa-volume-high"></i>+</button>
+                                <button type="button" class="complete-btn" data-id="${card.id}" title="더 이상 안 보기 (학습 완료로 표시)"><i class="fa-solid fa-trash"></i></button>
+                            </h3>
+                            ${ipaHtml}
+                            ${pronunHtml}
+                            <p class="flashcard-meaning">${card.meaning}</p>
+                        </div>
+                    </div>
+                    <div class="flashcard-bottom-area">
+                        <p class="flashcard-eng-example">
+                            ${card.engExample}
+                            <button type="button" class="speak-btn" data-word="${card.word}" data-seq="es" title="영어 예문 듣기"><i class="fa-solid fa-volume-high"></i></button>
+                            <button type="button" class="speak-btn plus" data-word="${card.word}" data-seq="es,ks" title="영어+한글 예문 듣기"><i class="fa-solid fa-volume-high"></i>+</button>
+                        </p>
+                        ${sentPronunHtml}
+                        <p class="flashcard-kor-example">${card.korExample}</p>
+                        <p class="flashcard-day-info">Day: ${card.day}</p>
+                    </div>
+                </div>
+            `;
+
+            pageInfoEl.textContent = `페이지 ${index + 1} / ${cardsData.length}`;
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = !randomMode && index === cardsData.length - 1;
+
+            bindSpeakEvents();
+            // 카드 로딩/전환 시 영어 단어 → 한글 의미 → 영어 예문 → 한글 예문 순차 자동재생
+            playSequence(card, getAudioPrefSuffixes(), null, () => {
+                if (autoAdvance) {
+                    autoAdvanceTimer = setTimeout(() => goToNext(), 900);
+                }
+            });
+
+            const url = new URL(window.location);
+            url.searchParams.set('page', index + 1);
+            window.history.replaceState({}, '', url);
+        }
+
+        function getRandomIndex() {
+            if (cardsData.length <= 1) return currentIndex;
+            let idx;
+            do {
+                idx = Math.floor(Math.random() * cardsData.length);
+            } while (idx === currentIndex);
+            return idx;
+        }
+
+        function goToNext() {
+            if (randomMode) {
+                goToPage(getRandomIndex());
+            } else if (currentIndex < cardsData.length - 1) {
+                goToPage(currentIndex + 1);
+            } else if (autoAdvance) {
+                // 자동 넘김 중 마지막 카드에 도달하면 정지
+                setAutoAdvance(false);
+            }
+        }
+
+        function setAutoAdvance(value) {
+            autoAdvance = value;
+            localStorage.setItem('autoAdvance', autoAdvance);
+            autoAdvanceBtn.classList.toggle('is-active', autoAdvance);
+            if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
+        }
+
+        function goToPage(index) {
+            if (!cardsReady) return;
+            if (index < 0 || index >= cardsData.length) return;
+            currentIndex = index;
+            renderCard(currentIndex);
+        }
+
+        // --- 캡처 기능 (.flashcard-section 캡처) ---
+        function captureAndDownload() {
+            const captureTarget = document.querySelector('.flashcard-section');
+            if (!captureTarget) {
+                console.warn('Capture target not found.');
+                return;
+            }
+            html2canvas(captureTarget, { useCORS: true }).then(function (canvas) {
+                const imgData = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = imgData;
+                const word = cardsData[currentIndex] ? cardsData[currentIndex].word : 'card';
+                link.download = `BB_FC_${String(currentIndex + 1).padStart(4, '0')}_${word}_capture.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }).catch(function (error) {
+                console.error('html2canvas 오류:', error);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof getActiveCardsData === 'function') {
+                cardsData = getActiveCardsData(); // 완료 표시한 단어는 플래시카드에서도 제외
+            }
+            toggleIpaBtn.textContent = showIpa ? t('hideIpa') : t('showIpa');
+            autoAdvanceBtn.classList.toggle('is-active', autoAdvance);
+            randomModeBtn.classList.toggle('is-active', randomMode);
+            initCards();
+
+            prevBtn.addEventListener('click', () => goToPage(currentIndex - 1));
+            nextBtn.addEventListener('click', () => {
+                if (autoCaptureInterval) {
+                    clearInterval(autoCaptureInterval);
+                    autoCaptureInterval = null;
+                    document.getElementById('startAutoCaptureBtn').style.display = 'inline-block';
+                    document.getElementById('stopAutoCaptureBtn').style.display = 'none';
+                }
+                goToNext();
+            });
+
+            autoAdvanceBtn.addEventListener('click', () => {
+                const turningOn = !autoAdvance;
+                setAutoAdvance(turningOn);
+                if (turningOn && cardsReady) {
+                    const card = cardsData[currentIndex];
+                    playSequence(card, getAudioPrefSuffixes(), null, () => {
+                        if (autoAdvance) autoAdvanceTimer = setTimeout(() => goToNext(), 900);
+                    });
+                }
+            });
+
+            randomModeBtn.addEventListener('click', () => {
+                randomMode = !randomMode;
+                localStorage.setItem('randomMode', randomMode);
+                randomModeBtn.classList.toggle('is-active', randomMode);
+                nextBtn.disabled = !randomMode && currentIndex === cardsData.length - 1;
+            });
+
+            document.getElementById('manualCaptureBtn').addEventListener('click', captureAndDownload);
+
+            toggleIpaBtn.addEventListener('click', function () {
+                showIpa = !showIpa;
+                localStorage.setItem('showIpa', showIpa);
+                toggleIpaBtn.textContent = showIpa ? t('hideIpa') : t('showIpa');
+                renderCard(currentIndex);
+            });
+
+            const startBtn = document.getElementById('startAutoCaptureBtn');
+            const stopBtn = document.getElementById('stopAutoCaptureBtn');
+            startBtn.addEventListener('click', function () {
+                if (autoCaptureInterval) clearInterval(autoCaptureInterval);
+                autoCaptureInterval = setInterval(captureAndDownload, 5000);
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+            });
+            stopBtn.addEventListener('click', function () {
+                clearInterval(autoCaptureInterval);
+                autoCaptureInterval = null;
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+            });
+        });
+    </script>
+    <script src="nav.js"></script>
+</body>
+</html>

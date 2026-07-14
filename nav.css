@@ -1,0 +1,239 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+ — 공용 내비게이션
+   nav.css
+   ============================================================ */
+
+.hb-btn {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 200;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 14px rgba(31, 42, 68, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--color-header, #1F2A44);
+    cursor: pointer;
+    border: none;
+}
+
+.hb-btn:hover {
+    background: #fff;
+}
+
+.hb-stop-btn {
+    position: fixed;
+    top: 14px;
+    left: 64px;
+    z-index: 200;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 4px 14px rgba(31, 42, 68, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: #EB5757;
+    cursor: pointer;
+    border: none;
+}
+
+.hb-stop-btn:hover {
+    background: #fff;
+    color: #C0392B;
+}
+
+.hb-stop-btn:active {
+    transform: scale(0.94);
+}
+
+.hb-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 33, 0.5);
+    z-index: 190;
+}
+
+.hb-overlay.is-open {
+    display: block;
+}
+
+.hb-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(280px, 82vw);
+    background: #fff;
+    z-index: 195;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.15);
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    overflow-y: auto;
+    padding: 20px 0 30px;
+}
+
+.hb-drawer.is-open {
+    transform: translateX(0);
+}
+
+.hb-drawer-header {
+    padding: 6px 20px 16px;
+    border-bottom: 1px solid #EEF1F6;
+    margin-bottom: 10px;
+}
+
+.hb-drawer-title {
+    font-family: var(--font-display, sans-serif);
+    font-weight: 800;
+    font-size: 15px;
+    color: var(--color-ink, #263043);
+    line-height: 1.35;
+}
+
+.hb-drawer-sub {
+    font-size: 12px;
+    color: var(--color-ink-soft, #5B6478);
+    margin-top: 2px;
+}
+
+.hb-section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #A6ADBB;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 14px 20px 6px;
+}
+
+.hb-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-ink, #263043);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.hb-link:hover {
+    background: #F4F6FA;
+}
+
+.hb-link.is-active {
+    background: #EEF3FF;
+    color: var(--color-blue, #2F80ED);
+    border-right: 3px solid var(--color-blue, #2F80ED);
+}
+
+.hb-link .hb-icon {
+    width: 20px;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+.hb-link.is-soon {
+    color: #B7BECC;
+    cursor: default;
+}
+
+.hb-link.is-soon:hover {
+    background: transparent;
+}
+
+.hb-badge-soon {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 700;
+    color: #B7BECC;
+    background: #F4F6FA;
+    padding: 2px 7px;
+    border-radius: 999px;
+}
+
+.hb-lang-pref {
+    padding: 4px 20px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.hb-lang-pref-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--color-ink, #263043);
+}
+
+.hb-lang-pref-row select {
+    flex: 1 1 auto;
+    max-width: 160px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid #E4E7EF;
+    background: #fff;
+    font-size: 13px;
+    color: var(--color-ink, #263043);
+}
+
+.hb-lang-apply-btn {
+    margin-top: 4px;
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    background: var(--color-blue, #2F80ED);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.hb-lang-apply-btn:hover {
+    opacity: 0.9;
+}
+
+.hb-audio-pref {
+    padding: 4px 20px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hb-audio-pref-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--color-ink, #263043);
+    padding: 6px 4px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.hb-audio-pref-item:hover {
+    background: #F4F6FA;
+}
+
+.hb-audio-pref-item input {
+    accent-color: var(--color-blue, #2F80ED);
+}
+
+@media print {
+    .hb-btn,
+    .hb-stop-btn,
+    .hb-overlay,
+    .hb-drawer {
+        display: none !important;
+    }
+}

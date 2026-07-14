@@ -1,0 +1,344 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+ — WordFinder Puzzle
+   style_wf.css (screen)
+   ============================================================ */
+
+body {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 20px 16px 110px;
+}
+
+header.screen-only {
+    background: linear-gradient(135deg, var(--color-header), var(--color-header-2));
+    border-radius: var(--radius-lg);
+    padding: 16px 22px;
+    margin-bottom: 18px;
+}
+
+header.screen-only h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.puzzle-level {
+    background: var(--color-purple);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-batch-number {
+    background: var(--color-orange);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-title {
+    display: none;
+}
+
+#puzzleContainer {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 24px;
+    flex-wrap: wrap;
+}
+
+/* ---------- 그리드 ---------- */
+.wordfinder-grid {
+    display: grid;
+    gap: 1px;
+    background: #D9DEE8;
+    border: 2px solid #D9DEE8;
+    border-radius: 8px;
+    overflow: hidden;
+    width: min(520px, 100%);
+    aspect-ratio: 1 / 1;
+    flex: 0 0 auto;
+}
+
+.wf-cell {
+    position: relative;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: clamp(9px, 2.4vw, 15px);
+    color: var(--color-ink);
+    transition: background 0.15s ease;
+}
+
+/* 정답 모드일 때 찾은 단어 칸을 단어별로 다른 색으로 강조 (원본 COLOR_CLASSES와 동일 팔레트) */
+body.mode-answer .wf-cell.color-red,
+.wf-cell.color-red.is-revealed { background: #FADBD8; color: #C0392B; }
+body.mode-answer .wf-cell.color-blue,
+.wf-cell.color-blue.is-revealed { background: #D6E9FA; color: #2266C4; }
+body.mode-answer .wf-cell.color-green,
+.wf-cell.color-green.is-revealed { background: #D8F3E2; color: #1E8E4F; }
+body.mode-answer .wf-cell.color-orange,
+.wf-cell.color-orange.is-revealed { background: #FCE4CC; color: #C8710F; }
+body.mode-answer .wf-cell.color-purple,
+.wf-cell.color-purple.is-revealed { background: #EBDBF7; color: #7E3FBF; }
+body.mode-answer .wf-cell.color-brown,
+.wf-cell.color-brown.is-revealed { background: #EADBCF; color: #7A5230; }
+body.mode-answer .wf-cell.color-teal,
+.wf-cell.color-teal.is-revealed { background: #D2F1EF; color: #128077; }
+body.mode-answer .wf-cell.color-maroon,
+.wf-cell.color-maroon.is-revealed { background: #F3D9DA; color: #8E3B3D; }
+body.mode-answer .wf-cell.color-navy,
+.wf-cell.color-navy.is-revealed { background: #D9E1EE; color: #1F3A5F; }
+body.mode-answer .wf-cell.color-olive,
+.wf-cell.color-olive.is-revealed { background: #E9EAD0; color: #6B6A1A; }
+body.mode-answer .wf-cell[class*="color-"],
+.wf-cell.is-revealed {
+    border-radius: 4px;
+    font-weight: 800;
+}
+
+/* ---------- 단어 목록 ---------- */
+.wf-word-list {
+    flex: 1 1 260px;
+    min-width: 220px;
+}
+
+.wf-word-list h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-teal);
+    margin: 0 0 8px;
+    border-bottom: 2px solid #E6F8F6;
+    padding-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.wf-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.wf-header-controls .speak-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+}
+
+.wf-header-controls .speak-btn.plus {
+    font-size: 10px;
+}
+
+.wf-word-list ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.wf-word-list li {
+    font-size: 15px;
+    color: var(--color-ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.4;
+    transition: opacity 0.15s ease;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 4px 6px;
+    margin: 0 -6px;
+}
+
+.wf-word-list li:hover {
+    background: #F4F6FA;
+}
+
+.wf-word-list li.is-revealed {
+    background: #FAFBFD;
+}
+
+.wf-item-number {
+    font-weight: 800;
+    color: var(--color-blue);
+    flex: 0 0 auto;
+}
+
+.wf-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex: 0 0 auto;
+    background: #F4F6FA;
+    cursor: zoom-in;
+    transition: transform 0.15s ease;
+}
+
+.wf-thumb:hover {
+    transform: scale(1.06);
+}
+
+.wf-answer-text {
+    display: none;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    font-family: var(--font-mono);
+}
+
+body.mode-answer .wf-answer-text {
+    display: inline;
+}
+
+.wf-answer-text.is-revealed {
+    display: inline !important;
+}
+
+.wf-answer-text.color-red { color: #C0392B; }
+.wf-answer-text.color-blue { color: #2266C4; }
+.wf-answer-text.color-green { color: #1E8E4F; }
+.wf-answer-text.color-orange { color: #C8710F; }
+.wf-answer-text.color-purple { color: #7E3FBF; }
+.wf-answer-text.color-brown { color: #7A5230; }
+.wf-answer-text.color-teal { color: #128077; }
+.wf-answer-text.color-maroon { color: #8E3B3D; }
+.wf-answer-text.color-navy { color: #1F3A5F; }
+.wf-answer-text.color-olive { color: #6B6A1A; }
+
+.answer-pronun {
+    display: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-teal);
+    margin-left: 4px;
+}
+
+body.mode-answer .answer-pronun,
+.answer-pronun.is-revealed {
+    display: inline;
+}
+
+.cell-pronun {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--color-teal);
+    margin-top: 2px;
+}
+
+/* ---------- 정답 요약 그리드 (wordcross와 동일 패턴) ---------- */
+.answer-grid {
+    display: none;
+    margin-top: 20px;
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+body.mode-answer .answer-grid {
+    display: block;
+}
+
+.answer-grid table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.answer-grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 0;
+}
+
+.answer-grid-header h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-ink);
+    margin: 0;
+}
+
+.answer-grid th {
+    background: var(--color-header);
+    color: #fff;
+    font-size: 13px;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.answer-grid td {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #EEF1F6;
+    vertical-align: middle;
+}
+
+.answer-grid tr:last-child td {
+    border-bottom: none;
+}
+
+.answer-grid .cell-word {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-word);
+}
+
+.answer-grid .cell-thumb img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+}
+
+/* ---------- 라이트박스 ---------- */
+.img-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 33, 0.82);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: zoom-out;
+}
+
+.img-lightbox.is-open {
+    display: flex;
+}
+
+.img-lightbox img {
+    max-width: min(90vw, 480px);
+    max-height: 80vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 640px) {
+    #puzzleContainer {
+        flex-direction: column;
+        padding: 16px;
+    }
+
+    .wordfinder-grid {
+        width: 100%;
+    }
+}

@@ -1,0 +1,29 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+
+   print_fc.css — 인쇄 및 캡처(html2canvas) 시 적용되는 스타일
+   ============================================================ */
+
+@media print {
+    body {
+        background: #FFFFFF;
+        padding-bottom: 0;
+    }
+
+    .pagination-controls {
+        display: none !important;
+    }
+
+    .main-layout-quiz {
+        margin: 0;
+        max-width: 100%;
+    }
+
+    .flashcard-item {
+        box-shadow: none;
+        border: 1px solid #E4E7EF;
+    }
+
+    .flashcard-word::after {
+        content: none; /* 인쇄물에는 스피커 아이콘 불필요 */
+    }
+}

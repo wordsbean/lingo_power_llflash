@@ -1,0 +1,373 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+
+   flashcard.css — 플래시카드 컴포넌트 스타일
+   ============================================================ */
+
+/* ---------- 상단 네비게이션 (순번 / 테마 / 레벨) ---------- */
+.top-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 24px;
+    background: linear-gradient(135deg, var(--color-header), var(--color-header-2));
+}
+
+.text-button-3d {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-soft);
+    white-space: nowrap;
+}
+
+.day-info {
+    background: var(--color-blue);
+    min-width: 44px;
+    text-align: center;
+}
+
+.theme-info {
+    background: var(--color-orange);
+    flex: 0 1 auto;
+}
+
+.level-info {
+    background: var(--color-purple);
+    letter-spacing: 0.03em;
+}
+
+/* ---------- 메인 레이아웃 ---------- */
+.main-layout-quiz {
+    max-width: 900px;
+    margin: 28px auto 0;
+    padding: 0 20px;
+}
+
+.flashcard-section h2 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-ink);
+    text-align: center;
+    margin: 0 0 18px;
+}
+
+.flashcard-grid-container {
+    display: flex;
+    justify-content: center;
+}
+
+/* ---------- 플래시카드 아이템 ---------- */
+.flashcard-item {
+    width: 100%;
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+.flashcard-top-area {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    padding: 32px;
+}
+
+.flashcard-image-wrapper {
+    flex: 0 0 auto;
+    width: 42%;
+    max-width: 320px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: #F4F6FA;
+}
+
+.flashcard-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+}
+
+.flashcard-word-meaning-content {
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+.flashcard-word {
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-weight: 800;
+    color: var(--color-word);
+    margin: 0 0 6px;
+    cursor: pointer;
+}
+
+.speak-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: 6px;
+    border-radius: 50%;
+    background: #EEF3FF;
+    color: var(--color-blue);
+    font-size: 14px;
+    vertical-align: middle;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.speak-btn i {
+    pointer-events: none;
+}
+
+.speak-btn:hover {
+    background: #DCE7FF;
+}
+
+.speak-btn:active {
+    transform: scale(0.92);
+}
+
+.speak-btn.plus {
+    background: #E6F8F6;
+    color: var(--color-teal);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.speak-btn.plus:hover {
+    background: #CFF1EE;
+}
+
+.complete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #F4F6FA;
+    color: var(--color-ink-soft);
+    font-size: 12px;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.complete-btn:hover {
+    background: #FDEBEA;
+    color: #C0392B;
+}
+
+.speak-btn.is-playing {
+    animation: speakPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes speakPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+}
+
+.flashcard-ipa {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    color: var(--color-teal);
+    margin: 0 0 12px;
+}
+
+.flashcard-pronun {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    color: var(--color-teal);
+    margin: 0 0 12px;
+}
+
+.flashcard-sent-pronun {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--color-ink-soft);
+    margin: 2px 0 8px;
+}
+
+.flashcard-meaning {
+    font-family: var(--font-body);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-ink);
+    margin: 0;
+    cursor: pointer;
+}
+
+.flashcard-meaning strong {
+    display: none; /* "의미:" 라벨은 시각적으로는 생략, 스크린리더용으로만 유지하려면 sr-only 처리 가능 */
+}
+
+/* ---------- 하단 예문 영역 ---------- */
+.flashcard-bottom-area {
+    padding: 24px 32px 28px;
+    border-top: 1px solid #EDEFF4;
+    text-align: center;
+}
+
+.flashcard-eng-example {
+    font-size: 19px;
+    font-weight: 500;
+    color: var(--color-example-en);
+    margin: 0 0 8px;
+    cursor: pointer;
+}
+
+.flashcard-eng-example strong,
+.flashcard-kor-example strong {
+    display: none;
+}
+
+.flashcard-kor-example {
+    font-size: 16px;
+    color: var(--color-ink-soft);
+    margin: 0 0 10px;
+    cursor: pointer;
+}
+
+.flashcard-day-info {
+    font-size: 12px;
+    color: #A6ADBB;
+    margin: 0;
+}
+
+/* speakable 요소 클릭 가능 표시 */
+.speakable:hover {
+    opacity: 0.82;
+}
+
+/* ---------- 하단 고정 컨트롤 바 ---------- */
+.pagination-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: #FFFFFF;
+    border-top: 1px solid #E4E7EF;
+    box-shadow: 0 -4px 16px rgba(31, 42, 68, 0.06);
+    z-index: 10;
+}
+
+.nav-button {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-blue);
+    padding: 10px 18px;
+    border-radius: var(--radius-md);
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.nav-button:hover:not(:disabled) {
+    background: var(--color-blue-dark);
+}
+
+.nav-button:active:not(:disabled) {
+    transform: scale(0.97);
+}
+
+#toggleIpaBtn {
+    background: var(--color-teal);
+}
+
+#toggleIpaBtn:hover {
+    background: #178782;
+}
+
+.icon-toggle {
+    background: #B9C2D4;
+}
+
+.icon-toggle:hover {
+    background: #9FA9BF;
+}
+
+.icon-toggle.is-active {
+    background: var(--color-purple);
+}
+
+.icon-toggle.is-active:hover {
+    background: #843fd1;
+}
+
+#stopAutoCaptureBtn {
+    background: #EB5757;
+}
+
+#stopAutoCaptureBtn:hover {
+    background: #cf4343;
+}
+
+.page-info {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-ink);
+    padding: 0 6px;
+    min-width: 120px;
+    text-align: center;
+}
+
+/* ---------- 반응형 (모바일) ---------- */
+@media (max-width: 640px) {
+    .top-navigation {
+        padding: 12px 14px;
+    }
+
+    .text-button-3d {
+        font-size: 13px;
+        padding: 6px 12px;
+    }
+
+    .flashcard-top-area {
+        flex-direction: column;
+        padding: 24px 20px;
+        gap: 18px;
+    }
+
+    .flashcard-image-wrapper {
+        width: 70%;
+        max-width: 240px;
+    }
+
+    .flashcard-word {
+        font-size: 32px;
+    }
+
+    .flashcard-meaning {
+        font-size: 19px;
+    }
+
+    .flashcard-eng-example {
+        font-size: 16px;
+    }
+
+    .pagination-controls {
+        gap: 8px;
+    }
+
+    .nav-button {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+
+    .page-info {
+        min-width: 90px;
+        font-size: 12px;
+    }
+}

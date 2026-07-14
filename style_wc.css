@@ -1,0 +1,362 @@
+/* ============================================================
+   플래시카드로 학습하는 초등영어 800+ — WordCross Puzzle
+   style_wc.css (screen)
+   ============================================================ */
+
+body {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 20px 16px 110px;
+}
+
+header.screen-only {
+    background: linear-gradient(135deg, var(--color-header), var(--color-header-2));
+    border-radius: var(--radius-lg);
+    padding: 16px 22px;
+    margin-bottom: 18px;
+}
+
+header.screen-only h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.puzzle-level {
+    background: var(--color-purple);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-batch-number {
+    background: var(--color-orange);
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 13px;
+}
+
+.puzzle-title {
+    display: none; /* 인쇄용 타이틀은 화면에서는 header로 대체 */
+}
+
+#puzzleContainer {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 24px;
+    flex-wrap: wrap;
+}
+
+/* ---------- 그리드 ---------- */
+.wordcross-grid {
+    display: grid;
+    gap: 2px;
+    background: #D9DEE8;
+    border: 2px solid #D9DEE8;
+    border-radius: 8px;
+    overflow: hidden;
+    width: min(520px, 100%);
+    aspect-ratio: 1 / 1;
+    flex: 0 0 auto;
+}
+
+.grid-cell {
+    position: relative;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(9px, 2.2vw, 15px);
+}
+
+.grid-cell.black-square {
+    background: transparent;
+}
+
+.clue-number {
+    position: absolute;
+    top: 1px;
+    left: 3px;
+    font-size: 0.5em;
+    font-weight: 700;
+    color: var(--color-blue);
+}
+
+.puzzle-letter {
+    color: var(--color-ink);
+}
+
+/* 문제 모드: 번호가 없는 칸(단어 중간 글자)만 정답 숨김.
+   번호가 있는 칸(단어 시작칸)은 첫 글자를 항상 힌트로 보여줌 */
+body:not(.mode-answer) .grid-cell:not(.grid-cell--numbered) .puzzle-letter {
+    visibility: hidden;
+}
+
+body:not(.mode-answer) .grid-cell--numbered .puzzle-letter {
+    color: var(--color-teal);
+}
+
+body.mode-answer .grid-cell {
+    background: #F3F8FF;
+}
+
+/* 백본(교차점 확보용 더미) 칸: 문제/정답 모드 상관없이 항상 주황색으로 보임.
+   실제 정답이 아니라 순수 구조용이라는 걸 시각적으로 구분해줌 */
+.grid-cell--backbone {
+    background: #F2994A !important;
+}
+
+.grid-cell--backbone .puzzle-letter {
+    visibility: visible !important;
+    color: #fff;
+    font-weight: 800;
+}
+
+/* ---------- 단서 영역 ---------- */
+.clues-section {
+    flex: 1 1 320px;
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.clues-column {
+    flex: 1 1 140px;
+    min-width: 140px;
+}
+
+.clues-column h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-teal);
+    margin: 0 0 8px;
+    border-bottom: 2px solid #E6F8F6;
+    padding-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.clue-header-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.clue-header-controls .speak-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+}
+
+.clue-header-controls .speak-btn.plus {
+    font-size: 10px;
+}
+
+.clues-column ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.clues-column li {
+    font-size: 16px;
+    color: var(--color-ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.5;
+    flex-wrap: wrap;
+}
+
+.clue-item-number {
+    font-weight: 800;
+    color: var(--color-blue);
+    flex: 0 0 auto;
+}
+
+.clue-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex: 0 0 auto;
+    background: #F4F6FA;
+    cursor: zoom-in;
+    transition: transform 0.15s ease;
+}
+
+.clue-thumb:hover {
+    transform: scale(1.06);
+}
+
+.clue-text {
+    font-size: 16px;
+}
+
+.clue-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.clue-controls .speak-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+}
+
+.clue-controls .speak-btn.plus {
+    font-size: 10px;
+}
+
+.answer-text {
+    display: none;
+    color: #EB5757;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+body.mode-answer .answer-text {
+    display: inline;
+}
+
+.answer-pronun {
+    display: none;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-teal);
+    margin-left: 4px;
+}
+
+body.mode-answer .answer-pronun {
+    display: inline;
+}
+
+.footer-message,
+.qr-code-container {
+    display: none; /* 화면에서는 인쇄용 푸터 숨김 */
+}
+
+@media (max-width: 640px) {
+    #puzzleContainer {
+        flex-direction: column;
+        padding: 16px;
+    }
+
+    .wordcross-grid {
+        width: 100%;
+    }
+}
+
+/* ---------- 이미지 라이트박스 ---------- */
+.img-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 33, 0.82);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    cursor: zoom-out;
+}
+
+.img-lightbox.is-open {
+    display: flex;
+}
+
+.img-lightbox img {
+    max-width: min(90vw, 480px);
+    max-height: 80vh;
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- 정답 요약 그리드 ---------- */
+.answer-grid {
+    display: none;
+    margin-top: 20px;
+    background: var(--color-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+body.mode-answer .answer-grid {
+    display: block;
+}
+
+.answer-grid table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.answer-grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 0;
+}
+
+.answer-grid-header h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: var(--color-ink);
+    margin: 0;
+}
+
+.answer-grid th {
+    background: var(--color-header);
+    color: #fff;
+    font-size: 13px;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.answer-grid td {
+    padding: 10px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #EEF1F6;
+    vertical-align: middle;
+}
+
+.answer-grid tr:last-child td {
+    border-bottom: none;
+}
+
+.answer-grid .cell-word {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--color-word);
+}
+
+.cell-pronun {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--color-teal);
+    margin-top: 2px;
+}
+
+.answer-grid .cell-thumb img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    display: block;
+}

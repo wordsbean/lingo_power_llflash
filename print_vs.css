@@ -1,0 +1,178 @@
+/* print_vs.css
+   플래시카드로 학습하는 초등영어 800+ — Vowel Scramble 인쇄
+   wordcross/wordfinder의 print 패턴 재사용 */
+
+@page {
+    size: A4;
+    margin: 0.4cm 0.5cm;
+
+    @top-left { content: ""; }
+    @top-center { content: ""; }
+    @top-right {
+        content: "플래시카드로 학습하는 초등영어 800+";
+        font-size: 0.8em;
+        color: #555;
+        vertical-align: bottom;
+        padding-top: 5px;
+    }
+    @bottom-left {
+        content: "Written by wordsbean";
+        font-size: 0.7em;
+        color: #666;
+    }
+    @bottom-center {
+        content: "페이지 " counter(page) " / " counter(pages);
+        font-size: 0.9em;
+        color: #333;
+    }
+    @bottom-right { content: ""; }
+}
+
+body {
+    font-size: 10pt;
+    color: black;
+    background-color: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+}
+
+.puzzle-title {
+    margin-top: 0 !important;
+    margin-bottom: 0.3cm !important;
+    font-size: 1.4em !important;
+}
+
+h1 .puzzle-batch-number,
+.puzzle-title .puzzle-batch-number {
+    font-size: 0.9em;
+    color: #333;
+    margin-left: 8pt;
+    font-weight: normal;
+}
+
+h1 .puzzle-level,
+.puzzle-title .puzzle-level {
+    color: #000;
+}
+
+.vs-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.4cm !important;
+}
+
+.vs-card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    padding: 0.3cm !important;
+    page-break-inside: avoid !important;
+}
+
+.vs-thumb {
+    width: 1.6cm !important;
+    height: 1.6cm !important;
+}
+
+.vs-char {
+    width: 0.6cm !important;
+    height: 0.7cm !important;
+    font-size: 0.9em !important;
+}
+
+/* 문제 모드: 빈칸은 그냥 빈칸으로, 정답 숨김 */
+.vs-blank {
+    background: transparent !important;
+    border-bottom: 2px solid #999 !important;
+}
+
+.vs-blank.is-filled,
+.vs-blank.is-active,
+.vs-blank.is-wrong {
+    background: transparent !important;
+    border-bottom: 2px solid #999 !important;
+    color: transparent !important;
+}
+
+/* 정답 모드: 빈칸에 정답 글자 빨간색으로 노출 */
+body.mode-answer .vs-blank {
+    background: transparent !important;
+    border-bottom: 2px solid #EB5757 !important;
+    color: #EB5757 !important;
+    font-weight: bold !important;
+}
+
+.vs-vowel-pool {
+    display: none !important; /* 인쇄에서는 모음 버튼 불필요 */
+}
+
+.vs-item-status {
+    display: none !important;
+}
+
+.vs-eng-example {
+    font-size: 0.85em !important;
+}
+
+.vs-kor-example {
+    font-size: 0.75em !important;
+}
+
+.answer-grid-header {
+    display: none !important;
+}
+
+.answer-grid {
+    display: none !important;
+}
+
+body.mode-answer .answer-grid {
+    display: block !important;
+    page-break-inside: avoid;
+    margin-top: 0.5cm !important;
+}
+
+body.mode-answer .answer-grid table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+}
+
+body.mode-answer .answer-grid th {
+    background: #eee !important;
+    color: #000 !important;
+    font-size: 0.75em !important;
+    padding: 4pt 6pt !important;
+    text-align: left !important;
+    border: 0.5px solid #ccc !important;
+}
+
+body.mode-answer .answer-grid td {
+    font-size: 0.8em !important;
+    padding: 4pt 6pt !important;
+    border: 0.5px solid #ddd !important;
+}
+
+body.mode-answer .answer-grid .cell-thumb {
+    display: none !important;
+}
+
+.screen-only {
+    display: none !important;
+}
+
+.pagination-controls {
+    display: none !important;
+}
+
+.img-lightbox {
+    display: none !important;
+}
+
+*, *::before, *::after {
+    box-shadow: none !important;
+}
+
+footer {
+    display: none !important;
+}
