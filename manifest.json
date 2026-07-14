@@ -1,0 +1,29 @@
+{
+  "name": "Lingo Power : Learn Languages with Flashcards",
+  "short_name": "Lingo Power",
+  "description": "Learn 11 languages with 110 pairing combinations using flashcards, crosswords, word search, sentence scramble, and more.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0144CA",
+  "theme_color": "#0144CA",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "books"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
