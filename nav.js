@@ -210,3 +210,14 @@ function tSafe(key, fallback) {
 
     render();
 })();
+
+// ---- 서비스워커 등록 (PWA 오프라인 지원) ----
+// nav.js가 거의 모든 페이지에서 로드되기 때문에 여기서 한 번만 등록해두면
+// 사이트 전체 범위(scope)에 적용됩니다.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch((err) => {
+            console.warn('서비스워커 등록 실패:', err);
+        });
+    });
+}
